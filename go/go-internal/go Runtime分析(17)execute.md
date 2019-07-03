@@ -1,0 +1,309 @@
+# execute
+
+~~~assembly
+0806ce00 <runtime.execute>:
+runtime.execute():
+/usr/local/lib/go/src/runtime/proc.go:1866
+//
+// Write barriers are allowed because this is called immediately after
+// acquiring a P in several places.
+//
+//go:yeswritebarrierrec
+func execute(gp *g, inheritTime bool) {
+ 806ce00:	65 8b 0d 00 00 00 00 	mov    %gs:0x0,%ecx
+ 806ce07:	8b 89 fc ff ff ff    	mov    -0x4(%ecx),%ecx
+ 806ce0d:	3b 61 08             	cmp    0x8(%ecx),%esp
+ 806ce10:	0f 86 4d 01 00 00    	jbe    806cf63 <runtime.execute+0x163>
+ 806ce16:	83 ec 10             	sub    $0x10,%esp
+/usr/local/lib/go/src/runtime/proc.go:1867
+	_g_ := getg()
+ 806ce19:	65 8b 05 00 00 00 00 	mov    %gs:0x0,%eax
+ 806ce20:	8b 80 fc ff ff ff    	mov    -0x4(%eax),%eax
+ 806ce26:	89 44 24 0c          	mov    %eax,0xc(%esp)
+/usr/local/lib/go/src/runtime/proc.go:1869
+
+	casgstatus(gp, _Grunnable, _Grunning)
+ 806ce2a:	8b 4c 24 14          	mov    0x14(%esp),%ecx
+ 806ce2e:	89 0c 24             	mov    %ecx,(%esp)
+ 806ce31:	c7 44 24 04 01 00 00 	movl   $0x1,0x4(%esp)
+ 806ce38:	00 
+ 806ce39:	c7 44 24 08 02 00 00 	movl   $0x2,0x8(%esp)
+ 806ce40:	00 
+ 806ce41:	e8 ba dc ff ff       	call   806ab00 <runtime.casgstatus>
+/usr/local/lib/go/src/runtime/proc.go:1870
+	gp.waitsince = 0
+ 806ce46:	8b 44 24 14          	mov    0x14(%esp),%eax
+ 806ce4a:	c7 40 6c 00 00 00 00 	movl   $0x0,0x6c(%eax)
+ 806ce51:	c7 40 70 00 00 00 00 	movl   $0x0,0x70(%eax)
+/usr/local/lib/go/src/runtime/proc.go:1871
+	gp.preempt = false
+ 806ce58:	c6 80 80 00 00 00 00 	movb   $0x0,0x80(%eax)
+/usr/local/lib/go/src/runtime/proc.go:1872
+	gp.stackguard0 = gp.stack.lo + _StackGuard
+ 806ce5f:	8b 08                	mov    (%eax),%ecx
+ 806ce61:	81 c1 70 03 00 00    	add    $0x370,%ecx
+ 806ce67:	89 48 08             	mov    %ecx,0x8(%eax)
+/usr/local/lib/go/src/runtime/proc.go:1866
+func execute(gp *g, inheritTime bool) {
+ 806ce6a:	0f b6 4c 24 18       	movzbl 0x18(%esp),%ecx
+ 806ce6f:	84 c9                	test   %cl,%cl
+/usr/local/lib/go/src/runtime/proc.go:1873
+	if !inheritTime {
+ 806ce71:	0f 84 d6 00 00 00    	je     806cf4d <runtime.execute+0x14d>
+/usr/local/lib/go/src/runtime/proc.go:1876
+		_g_.m.p.ptr().schedtick++
+	}
+	_g_.m.curg = gp
+ 806ce77:	8b 4c 24 0c          	mov    0xc(%esp),%ecx
+ 806ce7b:	8b 51 18             	mov    0x18(%ecx),%edx
+ 806ce7e:	84 02                	test   %al,(%edx)
+ 806ce80:	8b 1d 80 8e 0d 08    	mov    0x80d8e80,%ebx
+ 806ce86:	8d 6a 54             	lea    0x54(%edx),%ebp
+ 806ce89:	85 db                	test   %ebx,%ebx
+ 806ce8b:	0f 85 a3 00 00 00    	jne    806cf34 <runtime.execute+0x134>
+ 806ce91:	89 42 54             	mov    %eax,0x54(%edx)
+/usr/local/lib/go/src/runtime/proc.go:1877
+	gp.m = _g_.m
+ 806ce94:	8b 51 18             	mov    0x18(%ecx),%edx
+ 806ce97:	8b 1d 80 8e 0d 08    	mov    0x80d8e80,%ebx
+ 806ce9d:	8d 68 18             	lea    0x18(%eax),%ebp
+ 806cea0:	85 db                	test   %ebx,%ebx
+ 806cea2:	75 77                	jne    806cf1b <runtime.execute+0x11b>
+ 806cea4:	89 50 18             	mov    %edx,0x18(%eax)
+/usr/local/lib/go/src/runtime/proc.go:1881
+
+	// Check whether the profiler needs to be turned on or off.
+	hz := sched.profilehz
+	if _g_.m.profilehz != hz {
+ 806cea7:	8b 49 18             	mov    0x18(%ecx),%ecx
+/usr/local/lib/go/src/runtime/proc.go:1880
+	hz := sched.profilehz
+ 806ceaa:	8b 15 b4 92 0c 08    	mov    0x80c92b4,%edx
+/usr/local/lib/go/src/runtime/proc.go:1881
+	if _g_.m.profilehz != hz {
+ 806ceb0:	8b 89 84 00 00 00    	mov    0x84(%ecx),%ecx
+ 806ceb6:	39 ca                	cmp    %ecx,%edx
+ 806ceb8:	75 53                	jne    806cf0d <runtime.execute+0x10d>
+/usr/local/lib/go/src/runtime/proc.go:1885
+		resetcpuprofiler(hz)
+	}
+
+	if trace.enabled {
+ 806ceba:	0f b6 0d a8 0c 0d 08 	movzbl 0x80d0ca8,%ecx
+ 806cec1:	84 c9                	test   %cl,%cl
+ 806cec3:	74 17                	je     806cedc <runtime.execute+0xdc>
+/usr/local/lib/go/src/runtime/proc.go:1888
+		// GoSysExit has to happen when we have a P, but before GoStart.
+		// So we emit it here.
+		if gp.syscallsp != 0 && gp.sysblocktraced {
+ 806cec5:	8b 48 3c             	mov    0x3c(%eax),%ecx
+ 806cec8:	85 c9                	test   %ecx,%ecx
+ 806ceca:	74 0b                	je     806ced7 <runtime.execute+0xd7>
+ 806cecc:	0f b6 88 87 00 00 00 	movzbl 0x87(%eax),%ecx
+ 806ced3:	84 c9                	test   %cl,%cl
+ 806ced5:	75 18                	jne    806ceef <runtime.execute+0xef>
+/usr/local/lib/go/src/runtime/proc.go:1891
+			traceGoSysExit(gp.sysexitticks)
+		}
+		traceGoStart()
+ 806ced7:	e8 a4 0a 01 00       	call   807d980 <runtime.traceGoStart>
+/usr/local/lib/go/src/runtime/proc.go:1894
+	}
+
+	gogo(&gp.sched)
+ 806cedc:	8b 44 24 14          	mov    0x14(%esp),%eax
+ 806cee0:	83 c0 20             	add    $0x20,%eax
+ 806cee3:	89 04 24             	mov    %eax,(%esp)
+ 806cee6:	e8 65 92 01 00       	call   8086150 <runtime.gogo>
+/usr/local/lib/go/src/runtime/proc.go:1895
+}
+ 806ceeb:	83 c4 10             	add    $0x10,%esp
+ 806ceee:	c3                   	ret    
+/usr/local/lib/go/src/runtime/proc.go:1889
+			traceGoSysExit(gp.sysexitticks)
+ 806ceef:	8b 88 88 00 00 00    	mov    0x88(%eax),%ecx
+ 806cef5:	8b 90 8c 00 00 00    	mov    0x8c(%eax),%edx
+ 806cefb:	89 0c 24             	mov    %ecx,(%esp)
+ 806cefe:	89 54 24 04          	mov    %edx,0x4(%esp)
+ 806cf02:	e8 79 0f 01 00       	call   807de80 <runtime.traceGoSysExit>
+/usr/local/lib/go/src/runtime/proc.go:1894
+	gogo(&gp.sched)
+ 806cf07:	8b 44 24 14          	mov    0x14(%esp),%eax
+/usr/local/lib/go/src/runtime/proc.go:1891
+		traceGoStart()
+ 806cf0b:	eb ca                	jmp    806ced7 <runtime.execute+0xd7>
+/usr/local/lib/go/src/runtime/proc.go:1882
+		resetcpuprofiler(hz)
+ 806cf0d:	89 14 24             	mov    %edx,(%esp)
+ 806cf10:	e8 4b 8f 00 00       	call   8075e60 <runtime.resetcpuprofiler>
+/usr/local/lib/go/src/runtime/proc.go:1888
+		if gp.syscallsp != 0 && gp.sysblocktraced {
+ 806cf15:	8b 44 24 14          	mov    0x14(%esp),%eax
+/usr/local/lib/go/src/runtime/proc.go:1885
+	if trace.enabled {
+ 806cf19:	eb 9f                	jmp    806ceba <runtime.execute+0xba>
+/usr/local/lib/go/src/runtime/proc.go:1877
+	gp.m = _g_.m
+ 806cf1b:	89 2c 24             	mov    %ebp,(%esp)
+ 806cf1e:	89 54 24 04          	mov    %edx,0x4(%esp)
+ 806cf22:	e8 79 57 fe ff       	call   80526a0 <runtime.writebarrierptr>
+/usr/local/lib/go/src/runtime/proc.go:1888
+		if gp.syscallsp != 0 && gp.sysblocktraced {
+ 806cf27:	8b 44 24 14          	mov    0x14(%esp),%eax
+/usr/local/lib/go/src/runtime/proc.go:1881
+	if _g_.m.profilehz != hz {
+ 806cf2b:	8b 4c 24 0c          	mov    0xc(%esp),%ecx
+ 806cf2f:	e9 73 ff ff ff       	jmp    806cea7 <runtime.execute+0xa7>
+/usr/local/lib/go/src/runtime/proc.go:1876
+	_g_.m.curg = gp
+ 806cf34:	89 2c 24             	mov    %ebp,(%esp)
+ 806cf37:	89 44 24 04          	mov    %eax,0x4(%esp)
+ 806cf3b:	e8 60 57 fe ff       	call   80526a0 <runtime.writebarrierptr>
+/usr/local/lib/go/src/runtime/proc.go:1877
+	gp.m = _g_.m
+ 806cf40:	8b 44 24 14          	mov    0x14(%esp),%eax
+ 806cf44:	8b 4c 24 0c          	mov    0xc(%esp),%ecx
+ 806cf48:	e9 47 ff ff ff       	jmp    806ce94 <runtime.execute+0x94>
+/usr/local/lib/go/src/runtime/proc.go:1874
+		_g_.m.p.ptr().schedtick++
+ 806cf4d:	8b 4c 24 0c          	mov    0xc(%esp),%ecx
+ 806cf51:	8b 51 18             	mov    0x18(%ecx),%edx
+ 806cf54:	8b 52 5c             	mov    0x5c(%edx),%edx
+ 806cf57:	8b 5a 10             	mov    0x10(%edx),%ebx
+ 806cf5a:	43                   	inc    %ebx
+ 806cf5b:	89 5a 10             	mov    %ebx,0x10(%edx)
+/usr/local/lib/go/src/runtime/proc.go:1876
+	_g_.m.curg = gp
+ 806cf5e:	e9 14 ff ff ff       	jmp    806ce77 <runtime.execute+0x77>
+/usr/local/lib/go/src/runtime/proc.go:1866
+func execute(gp *g, inheritTime bool) {
+ 806cf63:	e8 c8 93 01 00       	call   8086330 <runtime.morestack_noctxt>
+ 806cf68:	e9 93 fe ff ff       	jmp    806ce00 <runtime.execute>
+ 806cf6d:	cc                   	int3   
+ 806cf6e:	cc                   	int3   
+ 806cf6f:	cc                   	int3  
+~~~
+
+
+
+
+
+~~~assembly
+08086150 <runtime.gogo>:
+runtime.gogo():
+/usr/local/lib/go/src/runtime/asm_386.s:224
+
+// void gogo(Gobuf*)
+// restore state from Gobuf; longjmp
+TEXT runtime·gogo(SB), NOSPLIT, $8-4
+ 8086150:	83 ec 08             	sub    $0x8,%esp
+/usr/local/lib/go/src/runtime/asm_386.s:225
+	MOVL	buf+0(FP), BX		// gobuf
+ 8086153:	8b 5c 24 0c          	mov    0xc(%esp),%ebx
+ // ############### ebx = gobuf
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:228
+
+	// If ctxt is not nil, invoke deletion barrier before overwriting.
+	MOVL	gobuf_ctxt(BX), DX
+ 8086157:	8b 53 0c             	mov    0xc(%ebx),%edx
+ // ########## edx= gobuf.ctx
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:229
+	TESTL	DX, DX
+ 808615a:	85 d2                	test   %edx,%edx
+ //############# gobuf.ctx 是否为空， 
+/usr/local/lib/go/src/runtime/asm_386.s:230
+	JZ	nilctxt
+ 808615c:	74 17                	je     8086175 <runtime.gogo+0x25>
+ // ############## 为空跳转到下面
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:231
+	LEAL	gobuf_ctxt(BX), AX
+ 808615e:	8d 43 0c             	lea    0xc(%ebx),%eax
+/usr/local/lib/go/src/runtime/asm_386.s:232
+	MOVL	AX, 0(SP)
+ 8086161:	89 04 24             	mov    %eax,(%esp)
+/usr/local/lib/go/src/runtime/asm_386.s:233
+	MOVL	$0, 4(SP)
+ 8086164:	c7 44 24 04 00 00 00 	movl   $0x0,0x4(%esp)
+ 808616b:	00 
+/usr/local/lib/go/src/runtime/asm_386.s:234
+	CALL	runtime·writebarrierptr_prewrite(SB)
+ 808616c:	e8 cf c5 fc ff       	call   8052740 <runtime.writebarrierptr_prewrite>
+/usr/local/lib/go/src/runtime/asm_386.s:235
+	MOVL	buf+0(FP), BX
+ 8086171:	8b 5c 24 0c          	mov    0xc(%esp),%ebx
+ //############# ebx= buf
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:238
+
+
+//################## jmp
+nilctxt:
+	MOVL	gobuf_g(BX), DX
+ 8086175:	8b 53 08             	mov    0x8(%ebx),%edx
+ // ########### edx= buf.g
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:239
+	MOVL	0(DX), CX		// make sure g != nil
+ 8086178:	8b 0a                	mov    (%edx),%ecx
+ //############# ？？？？？？？ 有点类似解引用如果为空，会panic
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:240
+	get_tls(CX)
+ 808617a:	65 8b 0d 00 00 00 00 	mov    %gs:0x0,%ecx
+/usr/local/lib/go/src/runtime/asm_386.s:241
+	MOVL	DX, g(CX)
+ 8086181:	89 91 fc ff ff ff    	mov    %edx,-0x4(%ecx)
+ // ########### gobuf.g  换掉tls里面的 g
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:242
+	MOVL	gobuf_sp(BX), SP	// restore SP
+ 8086187:	8b 23                	mov    (%ebx),%esp
+ // ############ esp = buf.sp
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:243
+	MOVL	gobuf_ret(BX), AX
+ 8086189:	8b 43 10             	mov    0x10(%ebx),%eax
+ // ############ eax = buf.ret
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:244
+	MOVL	gobuf_ctxt(BX), DX
+ 808618c:	8b 53 0c             	mov    0xc(%ebx),%edx
+ // ######## edx= buf.ctxt
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:245
+	MOVL	$0, gobuf_sp(BX)	// clear to help garbage collector
+ 808618f:	c7 03 00 00 00 00    	movl   $0x0,(%ebx)
+ // ########## buf.sp = 0
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:246
+	MOVL	$0, gobuf_ret(BX)
+ 8086195:	c7 43 10 00 00 00 00 	movl   $0x0,0x10(%ebx)
+ // ########### buf.ret = 0
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:247
+	MOVL	$0, gobuf_ctxt(BX)
+ 808619c:	c7 43 0c 00 00 00 00 	movl   $0x0,0xc(%ebx)
+ // ########### buf.ctxt = 0
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:248
+	MOVL	gobuf_pc(BX), BX
+ 80861a3:	8b 5b 04             	mov    0x4(%ebx),%ebx
+ //############# ebx = pc
+ 
+/usr/local/lib/go/src/runtime/asm_386.s:249
+	JMP	BX
+ 80861a6:	ff e3                	jmp    *%ebx
+ 80861a8:	cc                   	int3   
+ 80861a9:	cc                   	int3   
+ 80861aa:	cc                   	int3   
+ 80861ab:	cc                   	int3   
+ 80861ac:	cc                   	int3   
+ 80861ad:	cc                   	int3   
+ 80861ae:	cc                   	int3   
+ 80861af:	cc                   	int3  
+
+~~~
+
