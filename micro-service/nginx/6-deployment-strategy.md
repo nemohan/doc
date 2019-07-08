@@ -28,7 +28,7 @@ Another benefit of this pattern is that deploying a service instance is relative
 
 Also, because of the lack of overhead, starting a service is usually very fast. If the service is its own process, you simply start it. Otherwise, if the service is one of several instances running in the same container process or process group, you either dynamically deploy it into the container or restart the container.
 
-Despite its appeal, the Multiple Service Instances per Host pattern has some significant drawbacks. One major drawback is that there is little or no isolation of the service instances, unless each service instance is a separate process. While you can accurately monitor each service instance’s resource utilization, you cannot limit the resources each instance uses. It’s possible for a misbehaving service instance to consume all of the memory or CPU of the host.
+**Despite its appeal, the Multiple Service Instances per Host pattern has some significant drawbacks. One major drawback is that there is little or no isolation of the service instances, unless each service instance is a separate process. While you can accurately monitor each service instance’s resource utilization, you cannot limit the resources each instance uses. It’s possible for a misbehaving service instance to consume all of the memory or CPU of the host.**
 
 There is no isolation at all if multiple service instances run in the same process. All instances might, for example, share the same JVM heap. A misbehaving service instance could easily break the other services running in the same process. Moreover, you have no way to monitor the resources used by each service instance.
 
@@ -48,7 +48,7 @@ When you use [Service Instance per Virtual Machine](http://microservices.io/patt
 
 This is the primary approach used by Netflix to deploy its video streaming service. Netflix packages each of its services as an EC2 AMI using [Aminator](https://github.com/Netflix/aminator). Each running service instance is an EC2 instance.
 
-There are a variety tools that you can use to build your own VMs. You can configure your continuous integration (CI) server (for example, [Jenkins](https://jenkins-ci.org/)) to invoke Aminator to package your services as an EC2 AMI. [Packer.io](https://www.packer.io/) is another option for automated VM image creation. Unlike Aminator, it supports a variety of virtualization technologies including EC2, DigitalOcean, VirtualBox, and VMware.
+**There are a variety tools that you can use to build your own VMs. You can configure your continuous integration (CI) server (for example, [Jenkins](https://jenkins-ci.org/)) to invoke Aminator to package your services as an EC2 AMI. [Packer.io](https://www.packer.io/) is another option for automated VM image creation. Unlike Aminator, it supports a variety of virtualization technologies including EC2, DigitalOcean, VirtualBox, and VMware.**
 
 The company [Boxfuse](https://boxfuse.com/) has a compelling way to build VM images, which overcomes the drawbacks of VMs that I describe below. Boxfuse packages your Java application as a minimal VM image. These images are fast to build, boot quickly, and are more secure since they expose a limited attack surface.
 
@@ -82,7 +82,7 @@ To use this pattern, you package your service as a container image. A container 
 
 Once you have packaged your service as a container image, you then launch one or more containers. You usually run multiple containers on each physical or virtual host. You might use a cluster manager such as [Kubernetes](http://kubernetes.io/) or [Marathon](https://github.com/mesosphere/marathon) to manage your containers. A cluster manager treats the hosts as a pool of resources. It decides where to place each container based on the resources required by the container and resources available on each host.
 
-The Service Instance per Container pattern has both benefits and drawbacks. The benefits of containers are similar to those of VMs. They isolate your service instances from each other. You can easily monitor the resources consumed by each container. Also, like VMs, containers encapsulate the technology used to implement your services. The container management API also serves as the API for managing your services.
+**The Service Instance per Container pattern has both benefits and drawbacks. The benefits of containers are similar to those of VMs. They isolate your service instances from each other. You can easily monitor the resources consumed by each container. Also, like VMs, containers encapsulate the technology used to implement your services. The container management API also serves as the API for managing your services.**
 
 However, unlike VMs, containers are a lightweight technology. Container images are typically very fast to build. For example, on my laptop it takes as little as 5 seconds to package a [Spring Boot](https://projects.spring.io/spring-boot/) application as a Docker container. Containers also start very quickly since there is no lengthy OS boot mechanism. When a container starts, what runs is the service.
 

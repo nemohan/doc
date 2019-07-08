@@ -105,4 +105,11 @@ True
 
 
 
-9 
+9  list索引和索引处的值
+
+~~~python
+l = [1, 2, 3]
+for (index, value) in enumerate(l):
+	print(index, value)
+~~~
+
