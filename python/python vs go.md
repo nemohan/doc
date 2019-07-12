@@ -1,6 +1,6 @@
 # python vs go
 
-### python 和 go的一些语法上差异
+### python2.x 和 go的一些语法上差异
 
 1 python 没有swtich语句
 
@@ -75,7 +75,7 @@ d = a or b #选择第一个表达式为True的作为值
 
 6 Bool类型
 
-7 与众不同的if
+7 if 的骚操作
 
 ~~~python
 a = d if x else y #如果x的值为true, a 为d的值。否则为y的值
@@ -111,5 +111,15 @@ True
 l = [1, 2, 3]
 for (index, value) in enumerate(l):
 	print(index, value)
+~~~
+
+10 module、package
+
+~~~python
+"""
+python 和go 都有包(package)的概念，此外python还多了一个模块(module)概念
+在python中每个文件就是一个模块
+"""
+
 ~~~
 
