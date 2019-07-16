@@ -117,8 +117,37 @@ for (index, value) in enumerate(l):
 
 ~~~python
 """
-python 和go 都有包(package)的概念，此外python还多了一个模块(module)概念
-在python中每个文件就是一个模块
+python 2.x
+
+python 和go 都有包(package)的概念，此外python还多了一个模块(module)概念每个.py文件就是一个模块
+python的包的使用比较复杂,体现在3个方面:
+1)搜索路径
+可以在4个位置设置搜索路径:当前目录、PYTHONPATH环境变量指定的目录、标准库目录、.pth文件的内容
+
+2)导入的形式
+import *
+import module_a
+import pkg1.pkg2.module_b
+
+from pkg1 import module_a 
+from module_a import b
+
+以下为明确相对路径优先形式
+from .pkg import module_c
+from .. import module_d
+在2.x版本中，import module_a 先相对路径查找。再去绝对路径查找
+在3.7.2版本中，import module_a先去绝对路径查找。除非明确指定以相对路径为优先的查找
+
+3)动态加载reload
+
+4)包、模块的初始化顺序
+python 3.7.2 不用再指定__init__.py文件
+================================== go ================================================
+go的package导入路径明确,导入路径直接反应了包文件结构路径
+import "dir/dir1/package_name"
+import alias "dir/dir1/package_name" 
+
+越灵活的东西越复杂，
 """
 
 ~~~

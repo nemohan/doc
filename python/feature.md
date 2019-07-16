@@ -95,8 +95,10 @@ steps, and simply fetch the already loaded module object in memory
  
  以上四个部分定义的路径会以列表的形式保存在sys.path中
  
-
+如何从同一个包里面导入父包中模块
+from .. import module_name
 """
+
 
 ~~~
 
