@@ -105,7 +105,7 @@ True
 
 
 
-9  list索引和索引处的值
+9  list同时获取索引和索引位置的值
 
 ~~~python
 l = [1, 2, 3]
@@ -139,9 +139,14 @@ from .. import module_d
 在3.7.2版本中，import module_a先去绝对路径查找。除非明确指定以相对路径为优先的查找
 
 3)动态加载reload
+reload 不具有可传递性，加入模块a 导入了b, reload(a)不会导致b被reload
+非a.b形式的值，不会被reload影响
 
 4)包、模块的初始化顺序
 python 3.7.2 不用再指定__init__.py文件
+
+
+
 ================================== go ================================================
 go的package导入路径明确,导入路径直接反应了包文件结构路径
 import "dir/dir1/package_name"

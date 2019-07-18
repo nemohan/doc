@@ -102,3 +102,94 @@ from .. import module_name
 
 ~~~
 
+
+
+#### 匿名函数lambda
+
+lambda的一般形式:
+
+lambda argument1, argument2: expression using arguments
+
+lambda 和def 的差别:
+
+* lambda 是表达式(expression),不是语句(lambda is an expression, not a statement)
+* lambda 的函数体只能是单个表达式，不能是语句块(lambda's body is a single expression,not a block of statements)
+
+~~~python
+def func(x, y,z):
+  	return x + y +z
+#等同的lambda
+f = lambda x, y, z: x + y +z
+~~~
+
+
+
+#### decorator(装饰器)
+
+~~~python
+#不带参数的装饰器
+# t.py
+def func_dec(func):
+    return def new_func():
+    	tmp = "call function %s" % func.__name__
+        print(tmp)
+        return func()
+    return new_func
+
+@func_dec
+def func():
+    print(1)
+
+#等价于 func_dec(func)()
+>>> import t
+>>> t.func()
+call function func
+1
+
+
+def func_dec_with_arg(func):
+    return def new_func(arg):
+    	tmp = "call function func %s with argument:%s" %(func.__name__, arg)
+        print(tmp)
+        return func(arg)
+    return new_func
+@func_dec_with_arg
+def func_with_arg(a):
+    print("arg:", a)
+    
+>>> import t2
+>>> t2.func_with_arg("hello")
+call function:func
+===========1
+call function:func_with_arg  arg:hello
+arg: hello
+# 等价于 func_dec_with_arg(func_with_arg)(arg)
+
+def func_dec_
+
+~~~
+
+
+
+#### apply
+
+apply 是python内置的函数。调用方式apply(func, args)
+
+~~~python
+def echo(*args, **kwargs):
+    print args, kwargs
+>>> pargs = (1, 2)
+>>> kargs= {"a":3, "b":4}
+>>> apply(echo, pargs, kargs)
+~~~
+
+
+
+
+
+#### generator(生成器)
+
+~~~python
+
+~~~
+
