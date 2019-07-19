@@ -2,6 +2,12 @@
 
 1 不常使用的一些特性
 
+
+
+函数式工具
+
+map、reduce、filter
+
 1 enumerate
 
 ~~~python
@@ -17,6 +23,18 @@
 
 
 2 list comprehension
+
+一般形式:
+
+[ expression for target1 in sequence1 [if condition]
+for target2 in sequence2 [if condition] ...
+for targetN in sequenceN [if condition] ]
+
+~~~python
+>>> [x for x in range(10) if x %2 == 0]
+>>> 0,2,4,6,8
+
+~~~
 
 
 
@@ -127,10 +145,10 @@ f = lambda x, y, z: x + y +z
 #### decorator(装饰器)
 
 ~~~python
-#不带参数的装饰器
+#函数不带参数的装饰器
 # t.py
 def func_dec(func):
-    return def new_func():
+    def new_func():
     	tmp = "call function %s" % func.__name__
         print(tmp)
         return func()
@@ -147,12 +165,14 @@ call function func
 1
 
 
+#================ 函数带参数的=======================================
 def func_dec_with_arg(func):
-    return def new_func(arg):
+    def new_func(arg):
     	tmp = "call function func %s with argument:%s" %(func.__name__, arg)
         print(tmp)
         return func(arg)
     return new_func
+
 @func_dec_with_arg
 def func_with_arg(a):
     print("arg:", a)
@@ -160,12 +180,43 @@ def func_with_arg(a):
 >>> import t2
 >>> t2.func_with_arg("hello")
 call function:func
-===========1
 call function:func_with_arg  arg:hello
 arg: hello
 # 等价于 func_dec_with_arg(func_with_arg)(arg)
 
-def func_dec_
+#版本3
+def func_dec_with_arg2(arg):
+    print("func_dec_with_arg:", arg)
+ 	def dec_func(func):
+        print("dec_func")
+    	def real_func():
+            print("real_func")
+            return func()
+        return real_func
+    return dec_func
+
+@func_dec_with_arg2(arg)
+def func_with_arg2():
+    print("++++")
+    
+#版本4
+def func_dec_with_arg2(arg):
+    print("func_dec_with_arg2:", arg)
+    def dec_func(func):
+        print("dec_func")
+        def real_func(arg2):
+            print("real_func")
+            return func(arg2)
+        return real_func
+    return dec_func
+
+@func_dec_with_arg2("haha")
+def func_with_arg2(arg2):
+    print("+++++", arg2)
+
+
+func_with_arg2("no work")
+
 
 ~~~
 
@@ -185,11 +236,24 @@ def echo(*args, **kwargs):
 
 
 
+#### iterator(迭代器)
+
+~~~
+
+~~~
+
 
 
 #### generator(生成器)
 
 ~~~python
 
+"""
+Unlike normal functions that return a value and exit, generator functions automatically
+suspend and resume their execution and state around the point of value generation
+"""
+def gen(n):
+    for i in range(n):
+        yield i ** 2
 ~~~
 
