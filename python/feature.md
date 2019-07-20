@@ -238,6 +238,14 @@ def echo(*args, **kwargs):
 
 #### iterator(迭代器)
 
+python3:
+
+这个版本的迭代器不再提供next()方法
+
+python 2.x:
+
+有next()方法
+
 ~~~
 
 ~~~
@@ -245,6 +253,10 @@ def echo(*args, **kwargs):
 
 
 #### generator(生成器)
+
+python3:
+
+这个版本不再提供next()方法
 
 ~~~python
 
@@ -255,5 +267,6 @@ suspend and resume their execution and state around the point of value generatio
 def gen(n):
     for i in range(n):
         yield i ** 2
+ 
 ~~~
 
