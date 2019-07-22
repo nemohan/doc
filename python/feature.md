@@ -270,3 +270,20 @@ def gen(n):
  
 ~~~
 
+
+
+#### 默认参数
+
+~~~python
+def test_default(x=[]):
+    x.append(1)
+    print(x)
+
+test_default()
+test_default()
+
+运行结果:
+[1]
+[1, ]
+~~~
+
