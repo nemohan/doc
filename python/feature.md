@@ -287,3 +287,36 @@ test_default()
 [1, ]
 ~~~
 
+
+
+#### class
+
+* 支持方法重载，即子类方法可以覆盖父类同名方法
+
+* 支持操作符重载。
+
+* python不提供默认的操作符重载方法
+
+* 父类的构造函数，不会被自动调用
+
+  
+
+~~~python
+#操作符重载命名规范:__x__
+#每个类对象都有一个__class__属性，指向其类
+#每个类对象都有一个__base__属性tuple类型，指向其父类
+"""
+Each instance has a link to its class for inheritance,
+though—it’s called _ _class_ _, if you want to inspect it:
+>>> x._ _class_ _
+<class _ _main_ _.rec at 0x00BAFF60>
+Classes also have a _ _bases_ _ attribute, which is a tuple of their superclasses; these
+two attributes are how class trees are literally represented in memory by Python.
+The main point to take away from this look under the hood is that Python’s class
+model is extremely dynamic. Classes and instances are just namespace objects, with
+attributes created on the fly by assignment. Those assignments usually happen
+within the class statements you code, but they can occur anywhere you have a reference
+to one of the objects in the tree.
+"""
+~~~
+
