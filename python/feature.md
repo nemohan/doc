@@ -299,6 +299,8 @@ test_default()
 
 * 父类的构造函数，不会被自动调用
 
+* 类也是对象
+
   
 
 ~~~python
@@ -317,6 +319,71 @@ model is extremely dynamic. Classes and instances are just namespace objects, wi
 attributes created on the fly by assignment. Those assignments usually happen
 within the class statements you code, but they can occur anywhere you have a reference
 to one of the objects in the tree.
+"""
+#抽象类
+class super:
+    def delegete(self):
+        self.action（）
+class provider(super):
+    def action(self):
+        print("provide action")
+>>> x = provider()
+>>> x.delegete()
+provide action
+
+"""
+常见重载操作符:
+__init__ 构造函数
+__del__ 析构函数
+__call__ 函数调用
+__getattr__ 获取成员
+__setattr__ 设置成员变量
+__getitem__ 索引
+__iter__ 迭代器
+__next__ python 3.x
+"""
+~~~
+
+操作符重载
+
+~~~python
+#__getitem__ 买一赠一堆
+#如果类定义了__getitem__重载操作符，除了可用于索引使用外，在for、in、list comprehension、类型转换、map内置函数等情况下亦可使用
+class A:
+    def __init__(self, data):
+        self.data = data
+    def __getitem__(self, i):
+        return self.data[i]
+>>> X = A("Spam")
+>>> 'p' in X # All call _ _getitem_ _ too
+1
+>>> [c for c in X] # List comprehension
+['S', 'p', 'a', 'm']
+>>> map(None, X) # map calls
+['S', 'p', 'a', 'm']
+>>> (a, b, c, d) = X # Sequence assignments
+>>> a, c, d
+('S', 'a', 'm')
+>>> list(X), tuple(X), ''.join(X)
+(['S', 'p', 'a', 'm'], ('S', 'p', 'a', 'm'), 'Spam')
+>>> X
+<_ _main_ _.stepper instance at 0x00A8D5D0>
+
+
+#__iter__ 迭代
+"""
+Today, all iteration contexts in Python will try the _ _iter_ _ method first, before trying
+_ _getitem_ _. That is, they prefer the iteration protocol we learned about in
+Chapter 13 to repeatedly indexing an object; if the object does not support the iteration
+protocol, indexing is attempted instead.
+Technically, iteration contexts work by calling the iter built-in function to try to
+find an _ _iter_ _ method, which is expected to return an iterator object. If it’s provided,
+Python then repeatedly calls this iterator object’s next method to produce
+items until a StopIteration exception is raised. If no such _ _iter_ _ method is found,
+Python falls back on the _ _getitem_ _ scheme, and repeatedly indexes by offsets as
+before, until an IndexError exception is raised
+
+在所有迭代上下文中，python首先尝试调用__iter__。若没找到__iter__方法，则尝试__getitem__方法
 """
 ~~~
 

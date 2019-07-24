@@ -310,7 +310,7 @@ JSON properties which are `NULL` are not displayed in JSON-formatted `EXPLAIN` o
   The `index` join type is the same as [`ALL`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_all), except that the index tree is scanned. This occurs two ways:
 
   - If the index is a covering index for the queries and can be used to satisfy all data required from the table, only the index tree is scanned. In this case, the `Extra` column says `Using index`. An index-only scan usually is faster than [`ALL`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_all) because the size of the index usually is smaller than the table data.
-  - A full table scan is performed using reads from the index to look up data rows in index order. `Uses index` does not appear in the `Extra` column.（所选数据没有被cover index覆盖到)
+  - A full table scan is performed using reads from the index to look up data rows in index order. `Uses index` does not appear in the `Extra` column.（所选数据没有被cover index覆盖到, cluster index)
 
   MySQL can use this join type when the query uses only columns that are part of a single index.
 
@@ -324,7 +324,7 @@ JSON properties which are `NULL` are not displayed in JSON-formatted `EXPLAIN` o
 
 The `Extra` column of [`EXPLAIN`](https://dev.mysql.com/doc/refman/5.6/en/explain.html) output contains additional information about how MySQL resolves the query. The following list explains the values that can appear in this column. Each item also indicates for JSON-formatted output which property displays the `Extra` value. For some of these, there is a specific property. The others display as the text of the `message` property.
 
-If you want to make your queries as fast as possible, look out for `Extra` column values of `Using filesort` and `Using temporary`, or, in JSON-formatted `EXPLAIN` output, for `using_filesort` and `using_temporary_table` properties equal to `true`.
+<font color="red">If you want to make your queries as fast as possible, look out for `Extra` column values of `Using filesort` and `Using temporary`, or, in JSON-formatted `EXPLAIN` output, for `using_filesort` and `using_temporary_table` properties equal to `true`</font>
 
 - `Child of '*table*' pushed join@1` (JSON: `message` text)
 
@@ -457,9 +457,11 @@ If you want to make your queries as fast as possible, look out for `Extra` colum
 
 - `Using index` (JSON property: `using_index`)
 
-  The column information is retrieved from the table using only information in the index tree without having to do an additional seek to read the actual row. This strategy can be used when the query uses only columns that are part of a single index.
+  <font color="red">The column information is retrieved from the table using only information in the index tree without having to do an additional seek to read the actual row. This strategy can be used when the query uses only columns that are part of a single index.</font>
 
   For `InnoDB` tables that have a user-defined clustered index, that index can be used even when `Using index` is absent from the `Extra` column. This is the case if `type` is [`index`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_index) and `key` is `PRIMARY`.
+
+  
 
 - `Using index condition` (JSON property: `using_index_condition`)
 
@@ -485,11 +487,11 @@ If you want to make your queries as fast as possible, look out for `Extra` colum
 
 - `Using temporary` (JSON property: `using_temporary_table`)
 
-  To resolve the query, MySQL needs to create a temporary table to hold the result. This typically happens if the query contains `GROUP BY` and `ORDER BY`clauses that list columns differently.
+  <font color="red"> To resolve the query, MySQL needs to create a temporary table to hold the result. This typically happens if the query contains `GROUP BY` and `ORDER BY`clauses that list columns differently.</font>
 
 - `Using where` (JSON property: `attached_condition`)
 
-  A `WHERE` clause is used to restrict which rows to match against the next table or send to the client. Unless you specifically intend to fetch or examine all rows from the table, you may have something wrong in your query if the `Extra` value is not `Using where` and the table join type is [`ALL`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_all) or [`index`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_index).
+  <font color="red">A `WHERE` clause is used to restrict which rows to match against the next table or send to the client. Unless you specifically intend to fetch or examine all rows from the table, you may have something wrong in your query if the `Extra` value is not `Using where` and the table join type is [`ALL`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_all) or [`index`](https://dev.mysql.com/doc/refman/5.6/en/explain-output.html#jointype_index).</font>
 
   `Using where` has no direct counterpart in JSON-formatted output; the `attached_condition` property contains any `WHERE` condition used.
 
