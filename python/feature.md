@@ -305,7 +305,7 @@ test_default()
 
 ~~~python
 #操作符重载命名规范:__x__
-#每个类对象都有一个__class__属性，指向其类
+#每个类的实例都有一个__class__属性，指向其类
 #每个类对象都有一个__base__属性tuple类型，指向其父类
 """
 Each instance has a link to its class for inheritance,
@@ -344,7 +344,7 @@ __next__ python 3.x
 """
 ~~~
 
-操作符重载
+##### 操作符重载
 
 ~~~python
 #__getitem__ 买一赠一堆
@@ -386,4 +386,55 @@ before, until an IndexError exception is raised
 在所有迭代上下文中，python首先尝试调用__iter__。若没找到__iter__方法，则尝试__getitem__方法
 """
 ~~~
+
+###### 属性设置、获取
+
+~~~python
+# __getattr__  __setattr__
+#当类的实例定义了属性x时，访问x 不会调用__getattr__。若没有定义则会调用__getattr__
+class A:
+    def __init__(self):
+        self.name = "hz"
+    def __getattr__(self, attrname):
+        print("attrname:", attrname, "not defined")
+	def __setattr__(self, attrname, value):
+        tmp = "set attrname:%s value:%s" %(attrname, value)
+        print(tmp)
+        self.__dict__[attrname] = value
+>>> a = A
+>>> print(a.name)
+hz
+>>> a.age
+attrname age not defined
+
+>>> a.name = "tt"
+set attrname:name value:tt
+>>> a.no = 10
+set  attrname:no value:10
+#__setattr__  使用时要避免递归调用。所以在__setattr__里面不能使用self.x = v的形式。必须使用
+#self.__dict__[x] = v的形式
+
+~~~
+
+###### 字符串表示操作符
+
+~~~python
+#__str__,__repr__ 需要将类实例转换成字符串的地方，会首先调用__str__，若没有找到则调用__repr__。反过来不成立
+~~~
+
+###### 函数调用操作符
+
+~~~python
+#__call__ 函数式对象
+class A:
+    def __init__(self):
+        self.data = 2
+    def __call__(self, value):
+        return self.data * value
+>>> a = A()
+>>> a(3)
+>>> 6
+~~~
+
+
 
