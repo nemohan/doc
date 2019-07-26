@@ -299,7 +299,9 @@ test_default()
 
 * 父类的构造函数，不会被自动调用
 
-* 类也是对象
+* <font color='red'>类也是对象</font>
+
+* inheritance searches only happen on reference, not on assignment).
 
   
 
@@ -436,5 +438,31 @@ class A:
 >>> 6
 ~~~
 
+###### 继承
 
+* 支持多重继承，继承的属性、或方法的搜索父类顺序是从左到右
 
+~~~python
+class A:
+    def __init__(self):
+        pass
+class B:
+    def __init__(self):
+        pass
+class C(A, B):
+    def __init__(self):
+        
+
+~~~
+
+###### name mangling
+
+<font color="red">Here’s how name mangling works: names inside a class statement that start with
+two underscores, but don’t end with two underscores, are automatically expanded to
+include the name of the enclosing class. For instance, a name like __X within a class
+named Spam is changed to _Spam_ _X automatically: the original name is prefixed with
+a single underscore, and the enclosing class’ name. Because the modified name
+contains the name of the enclosing class, it’s somewhat unique; it won’t clash with
+similar names created by other classes in a hierarchy</font>
+
+python2、python3都保留了此特性。
