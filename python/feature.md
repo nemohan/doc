@@ -218,6 +218,11 @@ def func_with_arg2(arg2):
 func_with_arg2("no work")
 
 
+####
+@a @b @c
+def func():
+    pass
+func = a(b(c(func)))
 ~~~
 
 
@@ -344,6 +349,17 @@ __getitem__ 索引
 __iter__ 迭代器
 __next__ python 3.x
 """
+
+"""
+ 成员访问: __getattribute__ 
+ python 2.x 只适用于new-style类
+ python 3.x new-sytle和classic-style 都适用
+The _ _getattribute_ _ method, available for new-style classes only, allows a class to
+intercept all attribute references, not just undefined references (like _ _getattr_ _). It
+is also substantially trickier to use than _ _getattr_ _ and _ _setattr_ _ (it is prone to
+loops). I’ll defer to Python’s standard documentation for more details on this
+method.
+"""
 ~~~
 
 ##### 操作符重载
@@ -442,17 +458,34 @@ class A:
 
 * 支持多重继承，继承的属性、或方法的搜索父类顺序是从左到右
 
-~~~python
-class A:
-    def __init__(self):
-        pass
-class B:
-    def __init__(self):
-        pass
-class C(A, B):
-    def __init__(self):
-        
+* new style class(class inheritance from class object)多重继承的成员搜索顺序是广度优先，从左到右
+* classic class 的多重继承的成员搜索顺序是深度优先
+* python 3.x classic class 的多重继承的成员搜索顺序也是广度优先
 
+~~~python
+#classic style
+class A:
+ 	attr=1
+class B(A):
+  	pass
+class C(A):
+    attr=2
+class D(B,C):
+    pass
+x = D()
+print(x.attr)
+
+#new style
+class A(object):
+ 	attr=1
+class B(A):
+  	pass
+class C(A):
+    attr=2
+class D(B,C):
+    pass
+x = D()
+print(x.attr)
 ~~~
 
 ###### name mangling
@@ -466,3 +499,100 @@ contains the name of the enclosing class, it’s somewhat unique; it won’t cla
 similar names created by other classes in a hierarchy</font>
 
 python2、python3都保留了此特性。
+
+
+
+###### class的 property
+
+property 提供了一种访问类成员的一种新的方式
+
+语法: property(get, set, del, docstring)
+
+~~~python
+class A(object):
+    def getage(self):
+        return 40
+    age = property(getage, None, None, None)
+>>> x = A()
+>>> x.age  #call getage
+40
+~~~
+
+###### 类的静态方法和类方法(static method vs class method)
+
+~~~python
+class Multi:
+def imeth(self, x): # Normal instance method
+print self, x
+def smeth(x): # Static: no instance passed
+print x
+def cmeth(cls, x): # Class: gets class, not instance
+print cls, x
+smeth = staticmethod(smeth) # Make smeth a static method
+cmeth = classmethod(cmeth) # Make cmeth a class method.
+
+"""
+Technically, Python now supports three kinds of class-related methods: instance,
+static, and class. Instance methods are the normal (and default) case that we’ve seen
+in this book. You must always call an instance method with an instance object.
+When you call it through an instance, Python passes the instance to the first (leftmost)
+argument automatically; when you call it through a class, you pass along the
+instance manually:
+>>> obj = Multi( ) # Make an instance
+>>> obj.imeth(1) # Normal call, through instance
+<_ _main_ _.Multi instance...> 1
+>>> Multi.imeth(obj, 2) # Normal call, through class
+<_ _main_ _.Multi instance...> 2
+By contrast, static methods are called without an instance argument; their names are
+local to the scopes of the classes in which they are defined, and may be looked up by
+inheritance. Mostly, they work like simple functions that happen to be coded inside
+a class:
+>>> Multi.smeth(3) # Static call, through class
+3
+>>> obj.smeth(4) # Static call, through instance
+4
+Class methods are similar, but Python automatically passes the class (not an instance)
+in to a class method’s first (leftmost) argument:
+>>> Multi.cmeth(5) # Class call, through class
+_ _main_ _.Multi 5
+>>> obj.cmeth(6) # Class call, through instance
+_ _main_ _.Multi 6
+"""
+~~~
+
+
+
+#### 异常
+
+* python 2.x版本支持两种类型异常，字符串类型、对象类型
+* 
+
+~~~python
+#try except、 try finally  python 2.x的语法
+try:
+except name, data:
+except name1:
+    <statements> #run if name1 is raised.
+else:
+    <statements> #run if no exception was raised during try block
+    
+#python 3.x的语法
+try:
+   	<statements>
+except name as e:
+    <statements>
+
+#raise 抛出异常
+#python 2.x 
+raise E,V		#抛出指定类型的异常，外带附加数据
+raise E			#抛出指定类型的异常
+raise 			#重新抛出最近的异常
+#python 3.x raise E(V)
+#assert
+
+try:
+   	<statements>
+finally:
+    <statements>  #有没有异常抛出都会执行。抛出异常时，执行了finally的语句后，异常继续传播
+~~~
+
