@@ -565,7 +565,14 @@ _ _main_ _.Multi 6
 #### 异常
 
 * python 2.x版本支持两种类型异常，字符串类型、对象类型
-* 
+* 字符串类型的异常，通过is方法判定是否是能捕获该异常
+* 对象类型通过继承关系来判定，即父类可以捕获子类型异常
+
+* try except
+* raise
+* assert  
+* with  as
+* python 3.x 类类型异常，必须继承自BaseException 或Exception. python 2.x无此要求
 
 ~~~python
 #try except、 try finally  python 2.x的语法
@@ -582,17 +589,105 @@ try:
 except name as e:
     <statements>
 
+
+
+try:
+   	<statements>
+finally:
+    <statements>  #有没有异常抛出都会执行。抛出异常时，执行了finally的语句后，异常继续传播
+    
 #raise 抛出异常
 #python 2.x 
 raise E,V		#抛出指定类型的异常，外带附加数据
 raise E			#抛出指定类型的异常
 raise 			#重新抛出最近的异常
 #python 3.x raise E(V)
-#assert
+#assert  assert test,data 如果test结果为false,则抛出异常
 
-try:
-   	<statements>
-finally:
-    <statements>  #有没有异常抛出都会执行。抛出异常时，执行了finally的语句后，异常继续传播
+
+#类类型异常
+class A(Exception): pass
+class B(A): pass
+class C(A): pass
+
+def f0():
+    raise A()
+
+def f1():
+    raise B()
+
+def f2():
+    raise C()
+
+for func in (f0,f1,f2):
+    try:
+        func()
+    except A:
+        import sys
+        print(sys.exc_info()[0])
+
+~~~
+
+
+
+###### with as
+
+~~~python
+"""
+Here’s how the with statement actually works:
+1. The expression is evaluated, and results in an object known as a context manager,
+which must have _ _enter_ _ and _ _exit_ _ methods.
+2. The context manager’s _ _enter_ _ method is called. The value it returns is
+assigned to a variable if the as clause is present, or simply discarded otherwise.
+3. The code in the nested with block is executed.
+4. If the with block raises an exception, the _ _exit_ _(type, value, traceback) method
+is called with the exception details. Note that these are the same values returned by
+sys.exc_info, described in Python manuals and later in this part of the book. If this
+method returns a false value, the exception is reraised; otherwise, the exception is
+terminated. The exception should normally be reraised so that it is propagated outside
+the with statement.
+5. If the with block does not raise an exception, the _ _exit_ _ method is still called,
+but its type, value, and traceback arguments are all passed in as None
+"""
+# with语句  上下文管理协议.
+#支持上下文管理协议的类，重载__enter__, __exit__方法。__enter__的返回结果作为as变量的值.
+#with里面的语句执行结束后，有没有异常发生都会调用__exit__方法
+with expression [as variable]:
+    <statements>
+
+from _ _future_ _ import with_statement # Required in Python 2.5
+class TraceBlock:
+	def message(self, arg):
+		print 'running', arg
+	def _ _enter_ _(self):
+		print 'starting with block'
+		return self
+	def _ _exit_ _(self, exc_type, exc_value, exc_tb):
+		if exc_type is None:
+			print 'exited normally\n'
+		else:
+			print 'raise an exception!', exc_type
+		return False # propagate
+with TraceBlock( ) as action:
+	action.message('test 1')
+	print 'reached'
+    
+with TraceBlock( ) as action:
+	action.message('test 2')
+	raise TypeError
+	print 'not reached'
+
+% python withas.py
+starting with block
+running test 1
+reached
+exited normally
+starting with block
+running test 2
+raise an exception! <type 'exceptions.TypeError'>
+Traceback (most recent call last):
+File "C:/Python25/withas.py", line 22, in <module>
+raise TypeError
+TypeError
 ~~~
 
