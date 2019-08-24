@@ -25,7 +25,49 @@ COPY ./ /game
 CMD go build & /game/game --server_address=:8080
 ~~~
 
-提交部署之后仍然失败，好心塞啊。
+提交部署之后仍然失败，好心塞啊。看日志显示是没有找到.go文件，估计是路径不对。只好先在容器内启动一个其他进程，进入容器内看看当前的go的编译环境，发现在容器内GOPATH=/go，而我的项目目录是/game.所以需要将我的项目目录拷贝到容器内/go/src目录下。就有了以下版本的Dockerfile
+
+~~~dockerfile
+#v3
+FROM golang:latest
+COPY ./ /go/src/game
+CMD go build & /go/src/game/game --server_address=:8080
+~~~
+
+修改之后，再次失败。查看日志显示仍然是没有找到.go文件，这次只可能是执行go build 时的当前工作目录不是/go/src/game目录。当前容器默认的路径是/go。所以要切换到/go/src/game目录中。
+
+~~~dockerfile
+#v4
+FROM golang:latest
+COPY ./ /go/src/game
+RUN cd /go/src/game & go build 
+
+#v5
+FROM golang:latest
+COPY ./ /go/src/game
+CMD cd /go/src/game & go build 
+~~~
+
+上面两个版本还是不行。原因待确定？？？
+
+最终版本
+
+~~~dockerfile
+FROM golang:latest
+COPY ./ /go/src/game
+CMD /go/src/game/build.sh
+
+
+~~~
+
+
+
+~~~bash
+#!/bin/bash
+cd /go/src/game
+go build
+./game/game --server_address=:8080
+~~~
 
 
 
