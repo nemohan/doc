@@ -78,6 +78,8 @@ func readRequest(b *bufio.Reader, deleteHostHeader bool) (req *Request, err erro
 
 	fixPragmaCacheControl(req.Header)
 
+    //是否应该关闭连接
+    //若版本
 	req.Close = shouldClose(req.ProtoMajor, req.ProtoMinor, req.Header, false)
 
 	err = readTransfer(req, b)
@@ -280,6 +282,38 @@ func getscheme(rawurl string) (scheme, path string, err error) {
 	}
 	return "", rawurl, nil
 }
+~~~
+
+
+
+确定是否关闭连接
+
+* 若主版本小于1，则关闭
+* 版本为1.0， 且头部Connection : close 或 未设置keep-alive，关闭连接
+* 版本1.1，默认keep-alive
+
+~~~go
+// Determine whether to hang up after sending a request and body, or
+// receiving a response and body
+// 'header' is the request headers
+func shouldClose(major, minor int, header Header, removeCloseHeader bool) bool {
+	if major < 1 {
+		return true
+	}
+
+	conv := header["Connection"]
+	hasClose := httplex.HeaderValuesContainsToken(conv, "close")
+	if major == 1 && minor == 0 {
+		return hasClose || !httplex.HeaderValuesContainsToken(conv, "keep-alive")
+	}
+
+	if hasClose && removeCloseHeader {
+		header.Del("Connection")
+	}
+
+	return hasClose
+}
+
 ~~~
 
 
