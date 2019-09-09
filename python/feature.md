@@ -330,7 +330,7 @@ to one of the objects in the tree.
 #抽象类
 class super:
     def delegete(self):
-        self.action（）
+        self.action()
 class provider(super):
     def action(self):
         print("provide action")
