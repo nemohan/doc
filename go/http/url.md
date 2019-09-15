@@ -1,5 +1,96 @@
 # URL
 
+解析url
+
+~~~go
+// parse parses a URL from a string in one of two contexts. If
+// viaRequest is true, the URL is assumed to have arrived via an HTTP request,
+// in which case only absolute URLs or path-absolute relative URLs are allowed.
+// If viaRequest is false, all forms of relative URLs are allowed.
+func parse(rawurl string, viaRequest bool) (*URL, error) {
+	var rest string
+	var err error
+
+	if rawurl == "" && viaRequest {
+		return nil, errors.New("empty url")
+	}
+	url := new(URL)
+
+	if rawurl == "*" {
+		url.Path = "*"
+		return url, nil
+	}
+
+	// Split off possible leading "http:", "mailto:", etc.
+	// Cannot contain escaped characters.
+	if url.Scheme, rest, err = getscheme(rawurl); err != nil {
+		return nil, err
+	}
+	url.Scheme = strings.ToLower(url.Scheme)
+
+    //处理查询参数
+	if strings.HasSuffix(rest, "?") && strings.Count(rest, "?") == 1 {
+		url.ForceQuery = true
+		rest = rest[:len(rest)-1]
+	} else {
+		rest, url.RawQuery = split(rest, "?", true)
+	}
+
+    //假如requestURI形如http://www.xx.com,此时的rest为 //www.xx.com
+	if !strings.HasPrefix(rest, "/") {
+        //requestURI 只包含域名，不包含路径如http://www.baidu.com
+		if url.Scheme != "" {
+			// We consider rootless paths per RFC 3986 as opaque.
+			url.Opaque = rest
+			return url, nil
+		}
+        //uri 为空
+		if viaRequest {
+			return nil, errors.New("invalid URI for request")
+		}
+
+		// Avoid confusion with malformed schemes, like cache_object:foo/bar.
+		// See golang.org/issue/16822.
+		//
+		// RFC 3986, §3.3:
+		// In addition, a URI reference (Section 4.1) may be a relative-path reference,
+		// in which case the first path segment cannot contain a colon (":") character.
+		colon := strings.Index(rest, ":")
+		slash := strings.Index(rest, "/")
+		if colon >= 0 && (slash < 0 || colon < slash) {
+			// First path segment has colon. Not allowed in relative URL.
+			return nil, errors.New("first path segment in URL cannot contain colon")
+		}
+	}
+
+	if (url.Scheme != "" || !viaRequest && !strings.HasPrefix(rest, "///")) && strings.HasPrefix(rest, "//") {
+		var authority string
+		authority, rest = split(rest[2:], "/", false)
+		url.User, url.Host, err = parseAuthority(authority)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Set Path and, optionally, RawPath.
+	// RawPath is a hint of the encoding of Path. We don't want to set it if
+	// the default escaping of Path is equivalent, to help make sure that people
+	// don't rely on it in general.
+	if err := url.setPath(rest); err != nil {
+		return nil, err
+	}
+	return url, nil
+}
+
+~~~
+
+
+
+
+
+
+
+
+
 设置url
 
 url的rawPath 和Path的差异：
@@ -134,7 +225,7 @@ s 为: localhost:8080   c 为":":
 * cutc = true, 返回localhost, 8080
 * cutc = false, 返回localhost, :8080
 
-~~~
+~~~go
 // Maybe s is of the form t c u.
 // If so, return t, c u (or t, u if cutc == true).
 // If not, return s, "".

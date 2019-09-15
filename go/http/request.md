@@ -14,6 +14,8 @@ func readRequest(b *bufio.Reader, deleteHostHeader bool) (req *Request, err erro
 	if s, err = tp.ReadLine(); err != nil {
 		return nil, err
 	}
+    
+    //归还到缓存池
 	defer func() {
 		putTextprotoReader(tp)
 		if err == io.EOF {
@@ -289,7 +291,7 @@ func getscheme(rawurl string) (scheme, path string, err error) {
 确定是否关闭连接
 
 * 若主版本小于1，则关闭
-* 版本为1.0， 且头部Connection : close 或 未设置keep-alive，关闭连接
+* 版本为1.0， 且头部Connection : close 或 未设置keep-alive，关闭连接，默认关闭
 * 版本1.1，默认keep-alive
 
 ~~~go

@@ -121,7 +121,7 @@ func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
 
 
 
-传输编码
+传输编码，确定传输编码
 
 ~~~go
 // fixTransferEncoding sanitizes t.TransferEncoding, if needed.
@@ -189,6 +189,9 @@ func (t *transferReader) fixTransferEncoding() error {
 
 
 fixLength 确定消息长度
+
+* Content-Length 只允许有一个值
+* HEAD请求不允许有Content-Length头部
 
 ~~~go
 // Determine the expected body length, using RFC 2616 Section 4.4. This
