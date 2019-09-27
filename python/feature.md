@@ -144,7 +144,11 @@ f = lambda x, y, z: x + y +z
 
 #### decorator(装饰器)
 
+* decorator的返回值须是可调用的对象(函数，对象函数)
+
 ~~~python
+
+
 #函数不带参数的装饰器
 # t.py
 def func_dec(func):
@@ -153,6 +157,11 @@ def func_dec(func):
         print(tmp)
         return func()
     return new_func
+
+#第二种形式
+def func_dec(func):
+    print("call function %s" % func.__name__)
+    return func
 
 @func_dec
 def func():
@@ -165,7 +174,7 @@ call function func
 1
 
 
-#================ 函数带参数的=======================================
+#================ 函数带参数=======================================
 def func_dec_with_arg(func):
     def new_func(arg):
     	tmp = "call function func %s with argument:%s" %(func.__name__, arg)
@@ -173,17 +182,24 @@ def func_dec_with_arg(func):
         return func(arg)
     return new_func
 
+#simple
+def func_dec_with_arg(func):
+    print("call function func %s" % func.__name__)
+    return func
+
 @func_dec_with_arg
 def func_with_arg(a):
     print("arg:", a)
     
 >>> import t2
 >>> t2.func_with_arg("hello")
-call function:func
 call function:func_with_arg  arg:hello
 arg: hello
 # 等价于 func_dec_with_arg(func_with_arg)(arg)
 
+
+
+#========================== 带参数的装饰器===================================
 #版本3
 def func_dec_with_arg2(arg):
     print("func_dec_with_arg:", arg)
@@ -198,7 +214,17 @@ def func_dec_with_arg2(arg):
 @func_dec_with_arg2(arg)
 def func_with_arg2():
     print("++++")
-    
+
+func_with_arg2("hello")
+"""
+func_dec_with_arg: hello
+dec_func
+real_func
+++++
+"""
+
+
+
 #版本4
 def func_dec_with_arg2(arg):
     print("func_dec_with_arg2:", arg)
@@ -456,10 +482,17 @@ class A:
 
 ###### 继承
 
-* 支持多重继承，继承的属性、或方法的搜索父类顺序是从左到右
+支持多重继承
+
+2.x
 
 * new style class(class inheritance from class object)多重继承的成员搜索顺序是广度优先，从左到右
 * classic class 的多重继承的成员搜索顺序是深度优先
+
+3.x
+
+* 广度优先
+
 * python 3.x classic class 的多重继承的成员搜索顺序也是广度优先
 
 ~~~python
