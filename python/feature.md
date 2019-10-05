@@ -334,7 +334,6 @@ test_default()
 
 * inheritance searches only happen on reference, not on assignment).
 
-  
 
 ~~~python
 #操作符重载命名规范:__x__
@@ -722,5 +721,125 @@ Traceback (most recent call last):
 File "C:/Python25/withas.py", line 22, in <module>
 raise TypeError
 TypeError
+~~~
+
+
+
+#### 基类调用子类方法
+
+在基类的方法中调用子类拥有的同名方法时，调用的是子类方法。若最低层的子类没有该实现该方法，则调用其高层的方法
+
+~~~python
+class A:
+    def __init__(self):
+        print "init"
+        self.setup()
+        self.handle()
+    def handle(self):
+        print "a"
+        
+    def setup(self):
+        print "set a"
+
+
+class B(A):
+    def handle(self):
+        print "b"
+    def setup(self):
+        print "set b"
+
+
+class C(B):
+    def handle(self):
+        print "c"
+
+    def setup(self):
+        print "set c"
+
+c = C()
+
+init 
+set c
+c 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++
+class A:
+    def __init__(self):
+        print "init"
+        self.setup()
+        self.handle()
+    def handle(self):
+        print "a"
+        
+    def setup(self):
+        print "set a"
+
+
+class B(A):
+    def handle(self):
+        print "b"
+    def setup(self):
+        print "set b"
+
+
+class C(B):
+    def handle(self):
+        print "c"
+
+
+c = C()
+
+init 
+set b
+c 
+
+~~~
+
+
+
+#### 基类方法可以访问子类成员
+
+~~~python
+class A:
+    def __init__(self):
+        print "init"
+        self.setup()
+        self.handle()
+    def handle(self):
+        print "a"
+        
+    def setup(self):
+        print "set a"
+    def test(self):
+        self.setup()
+
+
+class B(A):
+    def handle(self):
+        print "b"
+    def setup(self):
+        print "set b"
+    def out(self):
+        print self.c
+
+
+class C(B):
+    def __init__(self):
+        self.c = 1
+    def handle(self):
+        print "c"
+
+    def setup(self):
+        print "set c"
+
+c = C()
+
+c.test()
+c.out()
+
+
+输出:
+    set c
+    1
 ~~~
 
