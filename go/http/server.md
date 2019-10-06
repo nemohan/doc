@@ -50,7 +50,7 @@ func (srv *Server) initialReadLimitSize() int64 {
 
 ##### 链接状态的定义
 
-~~~
+~~~go
 // A ConnState represents the state of a client connection to a server.
 // It's used by the optional Server.ConnState hook.
 type ConnState int
@@ -147,7 +147,7 @@ type Server struct {
 	// and RemoteAddr if not already set. The connection is
 	// automatically closed when the function returns.
 	// If TLSNextProto is not nil, HTTP/2 support is not enabled
-	// automatically.
+	// automatically./
 	TLSNextProto map[string]func(*Server, *tls.Conn, Handler)
 
 	// ConnState specifies an optional callback function that is
@@ -253,7 +253,6 @@ func (srv *Server) Serve(l net.Listener) error {
 }
 
 
-
 ~~~
 
 
@@ -343,7 +342,7 @@ Server.server 处理新链接
 
 处理新链接时，会捕获处ErrAbortHandler错误之外的panic
 
-~~~
+~~~go
 // Serve a new connection.
 func (c *conn) serve(ctx context.Context) {
 	c.remoteAddr = c.rwc.RemoteAddr().String()
@@ -384,7 +383,7 @@ func (c *conn) serve(ctx context.Context) {
 	}
 
 	// HTTP/1.x from here on.
-
+	//为何使用cancelCtx
 	ctx, cancelCtx := context.WithCancel(ctx)
 	c.cancelCtx = cancelCtx
 	defer cancelCtx()
