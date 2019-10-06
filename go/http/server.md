@@ -439,9 +439,14 @@ func (c *conn) serve(ctx context.Context) {
 
 		c.curReq.Store(w)
 
+        /************************************
+        若请求是POST/PUT请求，读取到不完整的请求体时，requestBodyRemains返回true
+        *******************************************/
+        //若请求
 		if requestBodyRemains(req.Body) {
 			registerOnHitEOF(req.Body, w.conn.r.startBackgroundRead)
 		} else {
+            //pipeline 
 			if w.conn.bufr.Buffered() > 0 {
 				w.conn.r.closeNotifyFromPipelinedRequest()
 			}
@@ -491,9 +496,11 @@ func (c *conn) serve(ctx context.Context) {
 
 
 
-从链接读取数据
 
-~~~
+
+###  conn.readRequest 从链接读取数据
+
+~~~go
 // Read next request from connection.
 func (c *conn) readRequest(ctx context.Context) (w *response, err error) {
 	//什么是http hijack
@@ -540,6 +547,7 @@ func (c *conn) readRequest(ctx context.Context) (w *response, err error) {
 	}
 
 	c.lastMethod = req.Method
+    //这一步操作有什么用
 	c.r.setInfiniteReadLimit()
 
 	hosts, haveHost := req.Header["Host"]
@@ -647,25 +655,5 @@ func bufioWriterPool(size int) *sync.Pool {
 
 
 
-#### connReader
 
-~~~go
-// connReader is the io.Reader wrapper used by *conn. It combines a
-// selectively-activated io.LimitedReader (to bound request header
-// read sizes) with support for selectively keeping an io.Reader.Read
-// call blocked in a background goroutine to wait for activity and
-// trigger a CloseNotifier channel.
-type connReader struct {
-	conn *conn
-
-	mu      sync.Mutex // guards following
-	hasByte bool
-	byteBuf [1]byte
-	bgErr   error // non-nil means error happened on background read
-	cond    *sync.Cond
-	inRead  bool
-	aborted bool  // set true before conn.rwc deadline is set to past
-	remain  int64 // bytes remaining
-}
-~~~
 

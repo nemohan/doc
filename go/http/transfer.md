@@ -1,5 +1,9 @@
 # transfer
 
+### readTransefer 
+
+这部分值得关注的就是req.Body的设置
+
 ~~~go
 // msg is *Request or *Response.
 func readTransfer(msg interface{}, r *bufio.Reader) (err error) {
