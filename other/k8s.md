@@ -2,7 +2,9 @@
 
 book: devops with kubernets
 
-### kubectl 常用命令
+book: k8s in action
+
+### 1 kubectl 常用命令
 
 查看pod归属于哪个node
 
@@ -17,6 +19,8 @@ kubectl run 												   创建deployment
 kubectl get service   									获取服务列表
 
 kubectl logs pod_name							  查看pod标准输出.类似docker logs container
+
+kubectl run micro-ui --image=test:micro-ui --port=8082 --generator=run-pod/v1  运行镜像
 
 ~~~shell
 // using kubectl run to launch the Pods
@@ -45,7 +49,7 @@ nginx 10.0.0.94 <none> 80/TCP 5s
 
 kubectl set image deployment nginx nginx=nginx:1.13.1 升级
 
-### deployment
+### 2 deployment
 
 在k8s 1.2版本之后，deployment是管理、部署程序的最佳方式。支持滚动升级、回滚pods和ReplicaSets
 
@@ -57,7 +61,7 @@ maxSurge：滚动升级时最多可以同时启动几个(每次同时升级几�
 
 maxUnavailable:  滚动升级时最多有多少个不可用
 
-### service
+### 3 service
 
 <font color="red"> Service in Kubernetes is an abstraction layer for routing traffic to a logical set of
 pods. With service, we don't need to trace the IP address of each pod. Service usually
@@ -109,6 +113,39 @@ internal IP to the service.
 
 使用NodePort，k8s会分配一个端口范围。到service端口的流量都会导向每个使用了上述范围内端口的Node
 
+有点类似于 docker -p port:port 。外部网络可以访问
+
+
+
+~~~yaml
+#以下面的服务为例
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: '2019-03-20T08:30:23Z'
+  name: xd-t-admin-svc
+  namespace: default
+  resourceVersion: '262040488'
+  selfLink: /api/v1/namespaces/default/services/xd-t-admin-svc
+  uid: 6777d904-4aea-11e9-81dd-4ed19a359ad4
+spec:
+  clusterIP: 172.17.10.210
+  externalTrafficPolicy: Cluster
+  ports:
+    - nodePort: 32424 		#映射到的主机端口
+      port: 80 				#到端口80的流量，会转发到32424再到内部容器
+      protocol: TCP
+      targetPort: 8030 		#app实际监听端口  类似:docker -p 32424:8030
+  selector:
+    app: xd-t-admin
+  sessionAffinity: None
+  type: NodePort
+status:
+  loadBalancer: {}
+~~~
+
+
+
 ##### LoadBalancer(负载均衡)
 
 配合云服务商使用
@@ -123,6 +160,41 @@ another namespace, another cluster, or external resources. In the following exam
 we'll demonstrate how to implement a proxy for http://www.google.com in your cluster.
 It's just an example while the source of the proxy might be the endpoint of your
 databases or other resources in the cloud:
+
+
+
+### 4 Ingress
+
+~~~yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/service-weight: ''
+  creationTimestamp: '2019-03-20T08:32:19Z'
+  generation: 1
+  name: xd-t-admin-ingress
+  namespace: default
+  resourceVersion: '262048222'
+  selfLink: /apis/extensions/v1beta1/namespaces/default/ingresses/xd-t-admin-ingress
+  uid: acc47acf-4aea-11e9-81dd-4ed19a359ad4
+spec:
+  rules:
+    - host: xd-t-admin-api.vipiao.com
+      http:
+        paths:
+          - backend:
+              serviceName: xd-t-admin-svc
+              servicePort: 80
+            path: /
+status:
+  loadBalancer:
+    ingress:
+      - ip: 39.96.133.80 # xd-t-admin-api.vipiao.com 绑定到了此地址
+
+~~~
+
+
 
 #### deployment、replicaSet、pod之间的关系
 
