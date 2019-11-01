@@ -35,7 +35,7 @@ At some point, the execute queue starts growing because all the threads on the s
 
 *Note that the queue length is zero for a period of time, but then starts to grow at a constant rate. This is because there is a steady increase in load on the system, and although initially the system had enough free threads to cope with the additional load, eventually it became overwhelmed and had to start queuing them up.*
 
-When the system reaches the point of saturation, the throughput of the server plateaus, and you have reached the maximum for the system given those conditions. However, as server load continues to grow, the response time of the system also grows even as the throughput plateaus.
+When the system reaches the point of saturation, the throughput of the server plateaus(n 稳定期，停滞期； v: 处于稳定期), and you have reached the maximum for the system given those conditions. However, as server load continues to grow, the response time of the system also grows even as the throughput plateaus.
 
 ![img](https://www.oracleimg.com/technetwork/articles/entarch/rampup-transactionresponsetime-104145.jpg)
 
