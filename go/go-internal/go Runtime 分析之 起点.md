@@ -1,3 +1,5 @@
+
+
 # go Runtime 分析（1） 起点
 
 
@@ -12,8 +14,33 @@ objdump -DgSlF main_goroutine > main_goroutine_objdump
 OARCH=386 go build -gccgoflags "-gstabs" -o main_goroutine main.go
 
 
-
 _rt0_386 go程序的起点，
+=======
+###  为什么要分析go runtime
+
+1 理解协程的实现及调度机制
+
+2 理解go的垃圾回收机制
+
+
+
+### runtime的一些约定
+
+栈自高地址开始，向低地址方向拓展。
+
+
+
+go运行时的栈帧结构如下：
+
+~~~
+______   高地址
+|参数1 
+|_____
+|参数2
+|____
+|返回地址栈方向从右到左
+
+~~~
 
 ~~~asm
 
@@ -47,8 +74,13 @@ void start(int argc, char* argv[]){
 
 ~~~
 
-~~~assembly
+上面代码相对简单，就是调用位于80887d0处的main函数。0x8(%esp)的值是参数么
 
+若参数，是argc还是argv
+
+
+
+~~~assembly
 
 函数  int main(int argc, char *argv[])
 
