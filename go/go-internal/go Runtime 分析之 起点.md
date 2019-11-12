@@ -11,6 +11,10 @@ objdump -DgSlF main_goroutine > main_goroutine_objdump
 
 OARCH=386 go build -gccgoflags "-gstabs" -o main_goroutine main.go
 
+
+
+_rt0_386 go程序的起点，
+
 ~~~asm
 
 版本 go 1.8.3  rt0_linux_386.s
