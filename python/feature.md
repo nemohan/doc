@@ -145,9 +145,13 @@ f = lambda x, y, z: x + y +z
 #### decorator(装饰器)
 
 * decorator的返回值须是可调用的对象(函数，对象函数)
+* decorator方便在调用函数之前以及之后做些额外操作
+* 若装饰器自带参数，那么调用装饰器时传递的参数就是自带参数
+* 若装饰器不带参数，那么调用时传递的参数就是被装饰的函数
+* 被装饰的函数不带参数，装饰器函数有一层足以
+* 若被装饰的函数有参数，那么装饰器（不带参数)至少嵌套两层，第一层的函数接收被装饰的函数，第二层函数接收被装饰函数的参数
 
 ~~~python
-
 
 #函数不带参数的装饰器
 # t.py
@@ -175,6 +179,7 @@ call function func
 
 
 #================ 函数带参数=======================================
+#若想记录被调用的函数及其参数只能用这种形式的
 def func_dec_with_arg(func):
     def new_func(arg):
     	tmp = "call function func %s with argument:%s" %(func.__name__, arg)
@@ -211,11 +216,18 @@ def func_dec_with_arg2(arg):
         return real_func
     return dec_func
 
-@func_dec_with_arg2(arg)
+# 应该按下面的方法写
+def func_dec_with_arg2(arg):
+    print("func_dec_with_arg:", arg)
+    def dec_func(func):
+        return func
+    return dec_func
+
+@func_dec_with_arg2("hello")
 def func_with_arg2():
     print("++++")
 
-func_with_arg2("hello")
+func_with_arg2()
 """
 func_dec_with_arg: hello
 dec_func
