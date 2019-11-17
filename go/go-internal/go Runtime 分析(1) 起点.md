@@ -650,12 +650,6 @@ ok:
 
 
 
-
-
-#### runtime.ldt0setup 定义在runtime/asm_386.s中
-
-调用定义在runtime/asm_386.s中的runtime.ldt0setup, ldt0setup会设置gs寄存器
-
 因为将基地址设置为m0.tls[1], 所以通过检查m0.tls[1]的值和从gs:0x0取得的值比较，相同则说明设置成功
 
 
@@ -663,11 +657,6 @@ ok:
 ~~~asm
 //设置ldt
  =============  80860c4
- 
- void _ldt0setup(){
-     
- }
- 
 /usr/local/lib/go/src/runtime/asm_386.s:123
 	CALL	runtime·ldt0setup(SB)
  80860c4:	e8 c7 16 00 00       	call   8087790 <runtime.ldt0setup>
@@ -753,8 +742,12 @@ TEXT runtime·ldt0setup(SB),NOSPLIT,$16-0
 	MOVL	$7, 0(SP)
  8087793:	c7 04 24 07 00 00 00 	movl   $0x7,(%esp)   //放到栈上
  
- 
+ /**************************************************
  //#### runtime.m0 的地址是080c9520  但是从 runtime2.go 的m结构体定义来看，tls地址偏移量为68而不是56  ??????????????????
+ m 的定义中procid 是在debugger用的，所以不在内 8字节
+ m.gobuf.bp 也是在GOEXPERIMENT开启了才有的 4字节
+ 这样算下来就是56字节
+ ***********************************/
  即 0x80c9520 + 0x44 = 0x80c9564
 /usr/local/lib/go/src/runtime/asm_386.s:859
 	LEAL	runtime·m0+m_tls(SB), AX
