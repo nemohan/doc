@@ -1,5 +1,7 @@
 # osinit
 
+#### runtime.osinit 定义在runtime/os_linux.go
+
 ~~~assembly
 //#############第一篇的初始化会调用此函数
 func osinit() {

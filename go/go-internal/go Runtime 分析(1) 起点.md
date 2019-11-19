@@ -530,6 +530,14 @@ _cgo_init 定义在runtim/cgo.go 文件中
 	
 	
 	
+/**************************************
+设置ldt成功后跳转到这里
+关联g0和m0
+调用emptyfunc(定义在runtime/asm_386.s)
+调用args函数(定义在runtime1.go)
+
+*************************************/
+	
 	{
         m0.tls[0] = &g0
         m0.g0 = &g0
@@ -600,6 +608,16 @@ ok:
 	CALL	runtime·args(SB)
  808609f:	e8 bc d4 fe ff       	call   8073560 <runtime.args>
  //######### runtime1.go args 函数
+ 
+ 
+ 
+ 
+ /*******************************
+ 调用runtime.osinit (定义在runtime/os_linux.go)
+ 调用runtime.schedinit (定义在runtime/proc.go)
+ 
+ *******************************************/
+ 
  
 /usr/local/lib/go/src/runtime/asm_386.s:157
 	CALL	runtime·osinit(SB)
@@ -754,7 +772,7 @@ TEXT runtime·ldt0setup(SB),NOSPLIT,$16-0
  808779a:	8d 05 58 95 0c 08    	lea    0x80c9558,%eax
 /usr/local/lib/go/src/runtime/asm_386.s:860
 	MOVL	AX, 4(SP)
- 80877a0:	89 44 24 04          	mov    %eax,0x4(%esp) //入栈
+ 80877a0:	89 44 24 04          	mov    %eax,0x4(%esp) 
 /usr/local/lib/go/src/runtime/asm_386.s:861
 	MOVL	$32, 8(SP)	// sizeof(tls array)
  80877a4:	c7 44 24 08 20 00 00 	movl   $0x20,0x8(%esp) //入栈
