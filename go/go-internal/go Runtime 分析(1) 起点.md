@@ -530,6 +530,14 @@ _cgo_init 定义在runtim/cgo.go 文件中
 	
 	
 	
+/**************************************
+设置ldt成功后跳转到这里
+关联g0和m0
+调用emptyfunc(定义在runtime/asm_386.s)
+调用args函数(定义在runtime1.go)
+
+*************************************/
+	
 	{
         m0.tls[0] = &g0
         m0.g0 = &g0
@@ -601,6 +609,16 @@ ok:
  808609f:	e8 bc d4 fe ff       	call   8073560 <runtime.args>
  //######### runtime1.go args 函数
  
+ 
+ 
+ 
+ /*******************************
+ 调用runtime.osinit (定义在runtime/os_linux.go)
+ 调用runtime.schedinit (定义在runtime/proc.go)
+ 
+ *******************************************/
+ 
+ 
 /usr/local/lib/go/src/runtime/asm_386.s:157
 	CALL	runtime·osinit(SB)
  80860a4:	e8 27 fe fd ff       	call   8065ed0 <runtime.osinit>
@@ -650,12 +668,6 @@ ok:
 
 
 
-
-
-#### runtime.ldt0setup 定义在runtime/asm_386.s中
-
-调用定义在runtime/asm_386.s中的runtime.ldt0setup, ldt0setup会设置gs寄存器
-
 因为将基地址设置为m0.tls[1], 所以通过检查m0.tls[1]的值和从gs:0x0取得的值比较，相同则说明设置成功
 
 
@@ -663,11 +675,6 @@ ok:
 ~~~asm
 //设置ldt
  =============  80860c4
- 
- void _ldt0setup(){
-     
- }
- 
 /usr/local/lib/go/src/runtime/asm_386.s:123
 	CALL	runtime·ldt0setup(SB)
  80860c4:	e8 c7 16 00 00       	call   8087790 <runtime.ldt0setup>
@@ -753,15 +760,19 @@ TEXT runtime·ldt0setup(SB),NOSPLIT,$16-0
 	MOVL	$7, 0(SP)
  8087793:	c7 04 24 07 00 00 00 	movl   $0x7,(%esp)   //放到栈上
  
- 
+ /**************************************************
  //#### runtime.m0 的地址是080c9520  但是从 runtime2.go 的m结构体定义来看，tls地址偏移量为68而不是56  ??????????????????
+ m 的定义中procid 是在debugger用的，所以不在内 8字节
+ m.gobuf.bp 也是在GOEXPERIMENT开启了才有的 4字节
+ 这样算下来就是56字节
+ ***********************************/
  即 0x80c9520 + 0x44 = 0x80c9564
 /usr/local/lib/go/src/runtime/asm_386.s:859
 	LEAL	runtime·m0+m_tls(SB), AX
  808779a:	8d 05 58 95 0c 08    	lea    0x80c9558,%eax
 /usr/local/lib/go/src/runtime/asm_386.s:860
 	MOVL	AX, 4(SP)
- 80877a0:	89 44 24 04          	mov    %eax,0x4(%esp) //入栈
+ 80877a0:	89 44 24 04          	mov    %eax,0x4(%esp) 
 /usr/local/lib/go/src/runtime/asm_386.s:861
 	MOVL	$32, 8(SP)	// sizeof(tls array)
  80877a4:	c7 44 24 08 20 00 00 	movl   $0x20,0x8(%esp) //入栈
