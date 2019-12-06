@@ -14,3 +14,6 @@ java
 
  https://howtodoinjava.com/java/garbage-collection/all-garbage-collection-algorithms/ 
 
+杂货
+
+cs.kent.ac.uk/people/staff/rej/gcbib/
