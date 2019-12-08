@@ -24,11 +24,63 @@
 
 #### 保守式GC和准确式GC
 
+保守式GC: 一般指没有运行时系统(runtime system)支持，不能准确区分指针和非指针，将疑似指针的非指针当作指针类型。
 
+~~~
+A conservative (mark & sweep) garbage collector is one
+that is able to collect memory without unambiguously
+identify pointers at run time.
+This is possible because, for a mark & sweep GC, an
+approximation of the reachability graph is sufficient to
+collect (some) garbage, as long as that approximation
+includes the actual reachability graph.
+
+A conservative GC assumes that everything that looks like a
+pointer to an allocated object is a pointer to an allocated
+object. This assumption is conservative — in that it can lead
+to the retention of dead objects — but safe — in that it cannot
+lead to the freeing of live objects.
+It is however very important that the GC uses as many hints
+as possible to avoid considering non-pointers as pointers,
+as this can lead to memory being retained needlessly
+~~~
+
+
+
+准确式GC:
+
+指针鉴别的一些技巧:
+
+Several characteristics of the architecture or compiler can be
+used to filter the set of potential pointers, e.g.:
+– Many architectures require pointers to be aligned in
+memory on 2 or 4 bytes boundaries. Therefore,
+unaligned potential pointers can be ignored.
+– Many compilers guarantee that if an object is reachable,
+then there exists at least one pointer to its beginning.
+Therefore, (potential) interior pointers can be ignored
 
 ### GC性能衡量指标
 
 吞吐量、暂停时间、内存利用率
+
+
+
+### GC 用到的一些定义
+
+roots: 可以从全局变量、寄存器、栈(栈上的量)直接访问的对象被称为根
+
+
+
+### 内存碎片化
+
+外部碎片化: 内存有很多小块的空闲内存。这种情况下要求分配一个大的内存块时，不能满足要求
+
+![1575813191821](E:\doc\GC\assets\1575813191821.png)
+
+内部碎片化: 指提供的内存大于要求的内存时产生的碎片。比如要求分配3个字节大小的内存，实际提供了4字节大小的块，就会导致1个字节碎片。
+
+![1575813305570](E:\doc\GC\assets\1575813305570.png)
 
 ### 近似或逼近的思想
 
