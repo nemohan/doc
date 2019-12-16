@@ -210,7 +210,16 @@ type g struct {
 
 #### runtim.rt0_go 
 
-此函数定义在runtime/asm_386.s 是一个比较大的函数，我们分段来看看rt0_go都做了哪些事情
+此函数定义在runtime/asm_386.s 是一个比较大的函数，将其分成几部分来分析
+
+rt0_go 的任务:
+
+* 初始化g0的堆栈
+* 检查cpu特性
+
+
+
+##### part 1
 
 下面这段代码主要初始化g0，设置g0使用的大约64KB的栈空间
 
@@ -286,11 +295,18 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 
 
 
-​	获取cpu的信息,先确定cpu是否支持CPUID指令，确定方法见我的汇编语言中提到的。
+##### part 2
 
-* 确定CPU是否支持CPUID
-* 不支持则程序退出
-* 
+通过检查能否设置EFLAGS 寄存器的第21位确定CPU是否支持CPUID指令。
+
+步骤: 获取EFLAGS的当前值，并保存在局部变量中old。通过异或0x200000设置EFLAGS的第21位。设置后将新的值保存到EFLAGS寄存器，然后再次获取EFLAGS寄存器的值 new_eflags。然后将old和new_eflags进行异或运算（若能设置第21位那么此时将得到0x200000)，将得到的运算结果和0x200000进行"与"操作。若结果不为0则说明可以设置EFLAGS寄存器。
+
+此部分完成的任务:
+
+* 检查能否设置EFLAGS寄存器的第21位
+* 能设置跳转到part2.2。不能设置则退出
+
+part 2.1 
 
 ~~~asm
 /***********************************
@@ -330,20 +346,15 @@ xorl $0x200000, (%esp)指令会设置或清除第21位
 	POPFL	// restore EFLAGS
  8085fb0:	9d                   	popf   
  
- //按我的推算，应该是相等才表明支持cpuid
- //对test指令理解有误
 /usr/local/lib/go/src/runtime/asm_386.s:41
 	TESTL	$(1<<21), AX
  8085fb1:	a9 00 00 20 00       	test   $0x200000,%eax
  
- //不相等则跳转
 /usr/local/lib/go/src/runtime/asm_386.s:42
 	JNE 	has_cpuid
- 8085fb6:	75 2a                	jne    8085fe2 <runtime.rt0_go+0x72>
+ 8085fb6:	75 2a                	jne    8085fe2 <runtime.rt0_go+0x72>  跳转到part2.2
 /usr/local/lib/go/src/runtime/asm_386.s:46
 #endif
-
-
 
 /********************************
 若不支持cpuid则退出程序
@@ -372,6 +383,18 @@ bad_proc: // show that the program requires MMX.
 	INT	$3
  8085fe0:	cd 03                	int    $0x3
 /usr/local/lib/go/src/runtime/asm_386.s:55
+~~~
+
+
+
+part 2.2
+
+~~~asm
+
+
+
+
+
 
 
 /****************************************
@@ -471,6 +494,10 @@ nocpuinfo:
 
 
 
+part 2.3
+
+* 检查_cgo_init的值是否为0，若为0则跳转到80860c4(part2.5)的位置继续执行
+
 ~~~assembly
 /****************************
 _cgo_init 定义在runtim/cgo.go 文件中
@@ -530,6 +557,16 @@ _cgo_init 定义在runtim/cgo.go 文件中
 	
 	
 	
+
+~~~
+
+
+
+part 2.4
+
+* ldt0setup成功后，跳转到这里
+
+~~~asm
 /**************************************
 设置ldt成功后跳转到这里
 关联g0和m0
@@ -668,9 +705,17 @@ ok:
 
 
 
-因为将基地址设置为m0.tls[1], 所以通过检查m0.tls[1]的值和从gs:0x0取得的值比较，相同则说明设置成功
 
 
+
+
+
+
+part 2.5
+
+* 调用runtime.ldt0setup
+* ldt0setup返回后，检查ldt的设置是否生效。因为将基地址设置为m0.tls[1], 所以通过检查m0.tls[1]的值和从gs:0x0取得的值比较，相同则说明设置成功
+* 若设置失败，则panic
 
 ~~~asm
 //设置ldt
@@ -734,6 +779,10 @@ TEXT runtime·asminit(SB),NOSPLIT,$0-0
 	RET
 ~~~
 
+
+
+
+
 #### ldt0setup 定义在runtime/asm_386.s中，ldt0setup的工作:
 
 * 调用setldt(0x7, m0.tls,  0x20)(定义在runtime/sys_linux_386.s)设置m0.tls(m0定义在runtime/proc2.go)
@@ -786,7 +835,13 @@ TEXT runtime·ldt0setup(SB),NOSPLIT,$16-0
 	
 ~~~
 
-#### setldt(runtime/sys_linux_386.s),setldt的任务是调用系统调用set_thread_area设置GDT的tls入口
+
+
+
+
+#### setldt(runtime/sys_linux_386.s)
+
+setldt的任务是调用系统调用set_thread_area设置GDT的tls入口
 
 第一个和第三个参数未使用
 

@@ -1,9 +1,5 @@
 # go runtime emptyfunc
 
-FDFDSF
-
-dfdfdf
-
 
 
 ~~~assembly
