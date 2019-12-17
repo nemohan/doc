@@ -1,5 +1,11 @@
 # schedinit 调度器初始化
 
+
+
+##### schedinit (runtime/proc.go)
+
+
+
 ~~~go
 //############# proc.go
 
@@ -60,6 +66,8 @@ func schedinit() {
 ~~~
 
 
+
+schedinit 对应的汇编代码
 
 ~~~assembly
 
