@@ -561,6 +561,8 @@ _cgo_init 定义在runtim/cgo.go 文件中
 part 2.4
 
 * ldt0setup成功后，跳转到这里
+* 设置m0.tls[0] = &g0
+* 设置m0.g0 = &g0, g0->m = &m0
 
 ~~~asm
 /**************************************
@@ -710,7 +712,7 @@ ok:
 part 2.5
 
 * 调用runtime.ldt0setup
-* ldt0setup返回后，检查ldt的设置是否生效。因为将基地址设置为m0.tls[1], 所以通过检查m0.tls[1]的值和从gs:0x0取得的值比较，相同则说明设置成功
+* ldt0setup返回后，检查ldt的设置是否生效。因为将基地址设置为m0.tls[1], 所以通过检查m0.tls[1]的值和从gs:0x0取得的值比较，相同则说明设置成功,然后跳转到part2.4位置继续执行
 * 若设置失败，则panic
 
 ~~~asm
@@ -844,24 +846,14 @@ setldt的任务是调用系统调用set_thread_area设置GDT的tls入口
 系统调用 set_thread_area
 
 ~~~
-These calls provide architecture-specific support for a thread-local
-       storage implementation.  At the moment, set_thread_area() is
-       available on m68k, MIPS, and x86 (both 32-bit and 64-bit variants);
+These calls provide architecture-specific support for a thread-local storage implementation.  At the moment, set_thread_area() is available on m68k, MIPS, and x86 (both 32-bit and 64-bit variants);
        get_thread_area() is available on m68k and x86.
+On m68k and MIPS, set_thread_area() allows storing an arbitrary pointer (provided in the tp argument on m68k and in the addr argument
+       on MIPS) in the kernel data structure associated with the calling thread; this pointer can later be retrieved using get_thread_area() (see also NOTES for information regarding obtaining the thread pointer on MIPS).
 
-       On m68k and MIPS, set_thread_area() allows storing an arbitrary
-       pointer (provided in the tp argument on m68k and in the addr argument
-       on MIPS) in the kernel data structure associated with the calling
-       thread; this pointer can later be retrieved using get_thread_area()
-       (see also NOTES for information regarding obtaining the thread
-       pointer on MIPS).
+       On x86, Linux dedicates three global descriptor table (GDT) entries for thread-local storage.  For more information about the GDT, see the Intel Software Developer's Manual or the AMD Architecture Programming Manual.
 
-       On x86, Linux dedicates three global descriptor table (GDT) entries
-       for thread-local storage.  For more information about the GDT, see
-       the Intel Software Developer's Manual or the AMD Architecture
-       Programming Manual.
-
-       Both of these system calls take an argument that is a pointer to a
+Both of these system calls take an argument that is a pointer to a
        structure of the following type:
 
            struct user_desc {
@@ -879,31 +871,21 @@ These calls provide architecture-specific support for a thread-local
            #endif
            };
 
-       get_thread_area() reads the GDT entry indicated by u_info->entry_num‐
-       ber and fills in the rest of the fields in u_info.
-
-       set_thread_area() sets a TLS entry in the GDT.
-
-       The TLS array entry set by set_thread_area() corresponds to the value
+       get_thread_area() reads the GDT entry indicated by u_info->entry_number and fills in the rest of the fields in u_info.
+set_thread_area() sets a TLS entry in the GDT.The TLS array entry set by set_thread_area() corresponds to the value
        of u_info->entry_number passed in by the user.  If this value is in
        bounds, set_thread_area() writes the TLS descriptor pointed to by
        u_info into the thread's TLS array.
 
-       When set_thread_area() is passed an entry_number of -1, it searches
-       for a free TLS entry.  If set_thread_area() finds a free TLS entry,
-       the value of u_info->entry_number is set upon return to show which
-       entry was changed.
+       When set_thread_area() is passed an entry_number of -1, it searches for a free TLS entry.  If set_thread_area() finds a free TLS entry,
+       the value of u_info->entry_number is set upon return to show which entry was changed.
 
-       A user_desc is considered "empty" if read_exec_only and
-       seg_not_present are set to 1 and all of the other fields are 0.  If
-       an "empty" descriptor is passed to set_thread_area(), the correspond‐
-       ing TLS entry will be cleared.  See BUGS for additional details.
+       A user_desc is considered "empty" if read_exec_only and  seg_not_present are set to 1 and all of the other fields are 0.  If
+       an "empty" descriptor is passed to set_thread_area(), the corresponding TLS entry will be cleared.  See BUGS for additional details.
 
-       Since Linux 3.19, set_thread_area() cannot be used to write non-
-       present segments, 16-bit segments, or code segments, although clear‐
-       ing a segment is still acceptable.
+       Since Linux 3.19, set_thread_area() cannot be used to write nonpresent segments, 16-bit segments, or code segments, although clearing a segment is still acceptable.
+       
 RETURN VALUE         top
-
        On x86, these system calls return 0 on success, and -1 on failure,
        with errno set appropriately.
 
@@ -993,8 +975,6 @@ tls_entry_number定义在runtime/sys_linux_386.s,默认值为-1
 user_desc.entry_number = tls_entry_number 
 user_desc.base_addr = &m0.tls[1]
 user_desc.
-
-
 ******************************/
 	// set up user_desc  下面初始化user_desc 然后调用set_thread_area
 	LEAL	16(SP), AX	// struct user_desc
