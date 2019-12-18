@@ -2,6 +2,8 @@
 
 #### runtime.osinit 定义在runtime/os_linux.go
 
+* osinit 调用getproccount()获取CPU核心数目并保存在全局变量ncpu(定义在runtime/runtime2.go)中
+
 ~~~assembly
 //#############第一篇的初始化会调用此函数
 func osinit() {
@@ -31,10 +33,19 @@ func osinit() {
  8065efc:	eb d2                	jmp    8065ed0 <runtime.osinit>
  8065efe:	cc                   	int3   
  8065eff:	cc                   	int3   
+ 
 ~~~
 
 ~~~assembly
 
+
+~~~
+
+##### getproccount (runtime/os_linux.go)
+
+* 
+
+~~~asm
 08065950 <runtime.getproccount>:
 runtime.getproccount():
 /usr/local/lib/go/src/runtime/os_linux.go:83
@@ -158,17 +169,11 @@ func getproccount() int32 {
  8065a34:	cc                   	int3   
  8065a35:	cc                   	int3   
  8065a36:	cc                   	int3   
- 8065a37:	cc                   	int3   
- 8065a38:	cc                   	int3   
- 8065a39:	cc                   	int3   
- 8065a3a:	cc                   	int3   
- 8065a3b:	cc                   	int3   
- 8065a3c:	cc                   	int3   
- 8065a3d:	cc                   	int3   
- 8065a3e:	cc                   	int3   
- 8065a3f:	cc                   	int3   
+
 
 ~~~
+
+
 
 
 
