@@ -1,5 +1,282 @@
 # git checkout
 
+### 改写历史，重回过去
+
+改写历史的几种方式:
+
+##### git checkout
+
+
+
+当前提交记录
+
+~~~
+ab19d3c (HEAD -> master) Revert "修改a.txt"
+b028812 (tag: v1.0) 修改a.txt
+baf7b1d 修改a.txt
+3165925 add data 123 to a.txt
+224e1e5 add a.txt
+
+~~~
+
+
+
+在当前分支(master)执行 git checkout commit，会出现如下提示
+
+~~~bash
+
+$ git checkout 3165925551f3892a56d091d5bb3fd8a50352f9b7
+Note: checking out '3165925551f3892a56d091d5bb3fd8a50352f9b7'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by performing another checkout.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -b with the checkout command again. Example:
+
+  git checkout -b <new-branch-name>
+
+HEAD is now at 3165925... add data 123 to a.txt
+
+~~~
+
+意思是当前处于'detached HEAD'状态，"分离的HEAD"什么意思？？。未执行上述命令前.git/HEAD文件的内容为refs/heads/master。执行checkout命令后, .git/HEAD文件内容为365925...，.git/refs/heads/master仍指向提交ab19d3。
+
+在这种状态下，如果直接切到其他分支，新的提交会被丢弃，若要保留提交，可以新建分支
+
+~~~bash
+echo "abc" > a.txt
+git add a.txt
+git commit -m "replace 123 with abc"
+git checkout master //导致当前的提及被丢弃
+
+git checkout -b new_branch 会保留当前提交
+~~~
+
+
+
+<font color="red">这种回退的方式适用于回到过去的某个提交点，然后在此提交点上创建新的分支。在原分支上checkout commit的以后的提交历史在新分支上都被丢弃了</font>
+
+##### git revert  
+
+git revert 是更改已经共享的commit的最佳方法，即已经使用push 推送到了远程仓库。因为git revert 会撤销某次提交的内容并生成一个新的commit。相当于对某次提交的内容做了一次undo，但提交历史还保留着，并为这次undo生成新的提交。
+
+~~~
+git revert <commit>
+~~~
+
+
+
+##### git reset
+
+更改本地未共享的commit的最佳方法。git reset的使用方式
+
+~~~
+git reset --mixed	重置HEAD和index, 当前工作区不变
+git reset --hard	重置HEAD、index, 当前工作区
+git reset --soft 	重置HEAD
+git reset --merge	重置HEAD、index、当前工作区。git reset --merge 和--hard的区别是啥
+git reset --keep	重置HEAD but keep local changes
+
+~~~
+
+以上几种使用方式的区别如下:
+
+~~~bash
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+$ echo "123" > a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+
+$ git add a.txt
+warning: LF will be replaced by CRLF in a.txt.
+The file will have its original line endings in your working directory.
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+
+$ git commit -m "write 123 to a.txt"
+[master (root-commit) a29d97a] write 123 to a.txt
+ 1 file changed, 1 insertion(+)
+ create mode 100644 a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+
+$ echo "456" >> a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+$ cat a.txt
+123
+456
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+$ git commit -am "append 456 to a.txt"
+warning: LF will be replaced by CRLF in a.txt.
+The file will have its original line endings in your working directory.
+[master 47e90f8] append 456 to a.txt
+ 1 file changed, 1 insertion(+)
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+$ git log -2
+commit 47e90f862f7b83eda57a7ff01ee111591220161e (HEAD -> master)
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:47:25 2020 +0800
+
+    append 456 to a.txt
+
+commit a29d97a3f1f4eaaaf9994326aabdf7c816e168ee
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:46:52 2020 +0800
+
+    write 123 to a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (master)
+
+
+
+~~~
+
+~~~
+
+
+~~~
+
+
+
+
+
+--mixed 选项
+
+~~~bash
+$ git log
+commit 47e90f862f7b83eda57a7ff01ee111591220161e (HEAD -> feature/test_reset_mixed, master)
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:47:25 2020 +0800
+
+    append 456 to a.txt
+
+commit a29d97a3f1f4eaaaf9994326aabdf7c816e168ee
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:46:52 2020 +0800
+
+    write 123 to a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ cat a.txt
+123
+456
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ echo "789" >> a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ git add a.txt
+warning: LF will be replaced by CRLF in a.txt.
+The file will have its original line endings in your working directory.
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ git status
+On branch feature/test_reset_mixed
+Changes to be committed:
+  (use "git reset HEAD <file>..." to unstage)
+
+        modified:   a.txt
+
+g(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ git reset --mixed a29d97
+Unstaged changes after reset:
+M       a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ cat a.txt
+123
+456
+789
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ git status
+On branch feature/test_reset_mixed
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+        modified:   a.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$
+
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_mixed)
+$ git log
+commit a29d97a3f1f4eaaaf9994326aabdf7c816e168ee (HEAD -> feature/test_reset_mixed)
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:46:52 2020 +0800
+
+    write 123 to a.txt
+(venv)
+
+
+~~~
+
+
+
+--hard
+
+~~~bash
+$ git checkout -b feature/test_reset_hard
+Switched to a new branch 'feature/test_reset_hard'
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$ cat a.txt
+123
+456
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$ git log
+commit 47e90f862f7b83eda57a7ff01ee111591220161e (HEAD -> feature/test_reset_hard, master)
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:47:25 2020 +0800
+
+    append 456 to a.txt
+
+commit a29d97a3f1f4eaaaf9994326aabdf7c816e168ee (feature/test_reset_mixed)
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:46:52 2020 +0800
+
+    write 123 to a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$ echo "789" >> a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$ git reset --hard a29d97
+HEAD is now at a29d97a write 123 to a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$ git log
+commit a29d97a3f1f4eaaaf9994326aabdf7c816e168ee (HEAD -> feature/test_reset_hard, feature/test_reset_mixed)
+Author: hanzhao6L <hanzhao@vipiao.com>
+Date:   Thu Mar 19 22:46:52 2020 +0800
+
+    write 123 to a.txt
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$ cat a.txt
+123
+(venv)
+lenovo@lenovo-PC MINGW64 /d/git_pra (feature/test_reset_hard)
+$
+
+~~~
+
+<font color="red">通过对比使用git reset --hard 和git reset --mixed，将二者的区别更加清晰的展示出来。不过还有个疑问重置index, 此处的index指什么，有什么用途</font>
+
+### 更改工作区和暂存区
+
+
+
 # Undoing Commits & Changes
 
 [git checkout](https://www.atlassian.com/git/tutorials/undoing-changes)[git clean](https://www.atlassian.com/git/tutorials/undoing-changes/git-clean)[git revert](https://www.atlassian.com/git/tutorials/undoing-changes/git-revert)[git reset](https://www.atlassian.com/git/tutorials/undoing-changes/git-reset)[git rm](https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
@@ -38,7 +315,7 @@ b5c1b5c70 Merge pull request #12799 from dhritzkiv/patch-21
 
 Each commit has a unique SHA-1 identifying hash. These IDs are used to travel through the committed timeline and revisit commits. By default, `git log` will only show commits for the currently selected branch. It is entirely possible that the commit you're looking for is on another branch. You can view all commits across all branches by executing `git log --branches=*`. The command `git branch` is used to view and visit other branches. Invoking the command, `git branch -a` will return a list of all known branch names. One of these branch names can then be logged using `git log <branch_name>`.
 
-When you have found a commit reference to the point in history you want to visit, you can utilize the `git checkout` command to visit that commit. `Git checkout` is an easy way to “load” any of these saved snapshots onto your development machine. During the normal course of development, the `HEAD` usually points to `master` or some other local branch, but when you check out a previous commit, `HEAD` no longer points to a branch—it points directly to a commit. This is called a “detached `HEAD`” state, and it can be visualized as the following:
+<font color="red">When you have found a commit reference to the point in history you want to visit, you can utilize the `git checkout` command to visit that commit. `Git checkout` is an easy way to “load” any of these saved snapshots onto your development machine. During the normal course of development, the `HEAD` usually points to `master` or some other local branch, but when you check out a previous commit, `HEAD` no longer points to a branch—it points directly to a commit. This is called a “detached `HEAD`” state, and it can be visualized as the following:</font>
 
 
 
@@ -90,7 +367,7 @@ a1e8fb5 Make some important changes to hello.txt
 
 We will focus on undoing the `872fa7e Try something crazy` commit. Maybe things got a little too crazy.
 
-## How to undo a commit with git checkout
+## <font color="red">How to undo a commit with git checkout</font>
 
 Using the `git checkout` command we can checkout the previous commit, `a1e8fb5,` putting the repository in a state before the crazy commit happened. Checking out a specific commit will put the repo in a "detached HEAD" state. This means you are no longer working on any branch. In a detached state, any new commits you make will be orphaned when you change branches back to an established branch. Orphaned commits are up for deletion by Git's garbage collector. The garbage collector runs on a configured interval and permanently destroys orphaned commits. To prevent orphaned commits from being garbage collected, we need to ensure we are on a branch.
 
@@ -128,7 +405,9 @@ The log output shows the `e2f9a78` and `872fa7e` commits no longer exist in the 
 
 In the previous section, we discussed different strategies for undoing commits. These strategies are all applicable to the most recent commit as well. In some cases though, you might not need to remove or reset the last commit. Maybe it was just made prematurely. In this case you can amend the most recent commit. Once you have made more changes in the working directory and staged them for commit by using `git add`, you can execute `git commit --amend`. This will have Git open the configured system editor and let you modify the last commit message. The new changes will be added to the amended commit.
 
-## Undoing uncommitted changes
+
+
+## <font color="red">Undoing uncommitted changes</font>
 
 Before changes are committed to the repository history, they live in the staging index and the working directory. You may need to undo changes within these two areas. The staging index and working directory are internal Git state management mechanisms. For more detailed information on how these two mechanisms operate, visit the `git reset` page which explores them in depth.
 

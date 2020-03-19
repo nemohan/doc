@@ -1,7 +1,5 @@
 # git commit
 
-# Git commit
-
 [git add](https://www.atlassian.com/git/tutorials/saving-changes)[git commit](https://www.atlassian.com/git/tutorials/saving-changes/git-commit)[git diff](https://www.atlassian.com/git/tutorials/saving-changes/git-diff)[git stash](https://www.atlassian.com/git/tutorials/saving-changes/git-stash)[.gitignore](https://www.atlassian.com/git/tutorials/saving-changes/gitignore)
 
 The `git commit` command captures a snapshot of the project's currently staged changes. Committed snapshots can be thought of as “safe” versions of a project—Git will never change them unless you explicitly ask it to. Prior to the execution of `git commit`, The `git add` command is used to promote or 'stage' changes to the project that will be stored in a commit. These two commands `git commit` and `git add` are two of the most frequently used.
@@ -16,7 +14,7 @@ At a high-level, Git can be thought of as a timeline management utility. Commits
 
 This changes the basic development model for Git users. Instead of making a change and committing it directly to the central repo, Git developers have the opportunity to accumulate commits in their local repo. This has many advantages over SVN-style collaboration: it makes it easier to split up a feature into atomic commits, keep related commits grouped together, and clean up local history before publishing it to the central repository. It also lets developers work in an isolated environment, deferring integration until they’re at a convenient point to merge with other users. While isolation and deferred integration are individually beneficial, it is in a team's best interest to integrate frequently and in small units. For more information regarding best practices for Git team collaboration read how teams structure their [Git workflow](https://www.atlassian.com/git/tutorials/comparing-workflows).
 
-## Snapshots, not differences
+## <font color="red">Snapshots, not differences</font>
 
 Aside from the practical distinctions between SVN and Git, their underlying implementation also follows entirely divergent design philosophies. Whereas SVN tracks differences of a file, Git’s version control model is based on snapshots. For example, a SVN commit consists of a diff compared to the original file added to the repository. Git, on the other hand, records the entire contents of each file in every commit.
 
@@ -38,7 +36,7 @@ Commit the staged snapshot. This will launch a text editor prompting you for a c
 git commit -a
 ```
 
-Commit a snapshot of all changes in the working directory. This only includes modifications to tracked files (those that have been added with `git add` at some point in their history).
+<font color="red">Commit a snapshot of all changes in the working directory. This only includes modifications to tracked files (those that have been added with `git add` at some point in their history).</font>
 
 ```
 git commit -m "commit message"
@@ -70,7 +68,7 @@ git add hello.py
 
 This command will add `hello.py` to the Git staging area. We can examine the result of this action by using the `git status` command.
 
-```
+```bash
 git status
 On branch master
 Changes to be committed:
@@ -106,7 +104,7 @@ Change the message displayed by hello.py
 ```
 
 It is a common practice to use the first line of the commit message as a subject line, similar to an email. The rest of the log message is considered the body and used to communicate details of the commit change set. Note that many developers also like to use the present tense in their commit messages. This makes them read more like actions on the repository, which makes many of the history-rewriting operations more intuitive.
- 
+
 
 ## How to update (amend) a commit
 

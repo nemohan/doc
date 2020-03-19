@@ -1,5 +1,3 @@
-# git status
-
 # Git Status: Inspecting a repository
 
 [git status](https://www.atlassian.com/git/tutorials/inspecting-a-repository)[git tag](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-tag)[git blame](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-blame)
@@ -62,7 +60,7 @@ For this reason, Git lets you completely ignore files by placing paths in a spec
 
 It's good practice to check the state of your repository before committing changes so that you don't accidentally commit something you don't mean to. This example displays the repository status before and after staging and committing a snapshot:
 
-```
+```bash
 # Edit hello.py
 git status
 # hello.py is listed under "Changes not staged for commit"
@@ -94,6 +92,7 @@ Display the entire commit history using the default formatting. If the output ta
 
 ```
 git log -n <limit>
+或者 git log -1
 ```
 
 Limit the number of commits by `<limit>`. For example, `git log -n 3` will display only 3 commits.

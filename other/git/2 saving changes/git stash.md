@@ -1,6 +1,10 @@
 # git stash
 
-# Git stash
+
+
+### 总结
+
+git stash 只stash被跟踪(tracked)的文件
 
 [git add](https://www.atlassian.com/git/tutorials/saving-changes)[git commit](https://www.atlassian.com/git/tutorials/saving-changes/git-commit)[git diff](https://www.atlassian.com/git/tutorials/saving-changes/git-diff)[git stash](https://www.atlassian.com/git/tutorials/saving-changes/git-stash)[.gitignore](https://www.atlassian.com/git/tutorials/saving-changes/gitignore)
 
@@ -21,7 +25,7 @@
 
 The `git stash` command takes your uncommitted changes (both staged and unstaged), saves them away for later use, and then reverts them from your working copy. For example:
 
-```
+```bash
 $ git status
 On branch master
 Changes to be committed:
@@ -49,10 +53,11 @@ Note that the stash is local to your Git repository; stashes are not transferred
 
 You can reapply previously stashed changes with `git stash pop`:
 
-```
+```bash
 $ git status
 On branch master
 nothing to commit, working tree clean
+
 $ git stash pop
 On branch master
 Changes to be committed:
@@ -84,9 +89,9 @@ Changes not staged for commit:
 
 This is useful if you want to apply the same stashed changes to multiple branches.
 
-Now that you know the basics of stashing, there is one caveat with `git stash` you need to be aware of: by default Git *won't* stash changes made to untracked or ignored files.
+<font color="red">Now that you know the basics of stashing, there is one caveat with `git stash` you need to be aware of: by default Git *won't* stash changes made to untracked or ignored files.</font>
 
-## Stashing untracked or ignored files
+## <font color="red">Stashing untracked or ignored files</font>
 
 By default, running `git stash` will stash:
 
@@ -262,11 +267,11 @@ You can hit **?** for a full list of hunk commands. Commonly useful ones are:
 
 There is no explicit "abort" command, but hitting `CTRL-C`(SIGINT) will abort the stash process.
 
-## Creating a branch from your stash
+## <font color="red">Creating a branch from your stash</font>
 
 If the changes on your branch diverge from the changes in your stash, you may run into conflicts when popping or applying your stash. Instead, you can use `git stash branch` to create a new branch to apply your stashed changes to:
 
-```
+```bash
 $ git stash branch add-stylesheet stash@{1}
 Switched to a new branch 'add-stylesheet'
 On branch add-stylesheet
@@ -298,7 +303,9 @@ Or you can delete all of your stashes with:
 $ git stash clear
 ```
 
-## How git stash works
+
+
+## <font color="red">How git stash works</font>
 
 If you just wanted to know how to use `git stash`, you can stop reading here. But if you're curious about how Git (and `git stash`) works under the hood, read on!
 
@@ -312,6 +319,8 @@ $ git log --oneline --graph stash@{0}
 | * 7023dd4 index on master: 5002d47 our new homepage
 |/ 
 * 5002d47 our new homepage
+
+如上所说最近的stash 的sha1值保存在.git/refs/stash中。而所有的stash 记录则在.git/log/refs/stash中
 ```
 
 Depending on what you stashed, a single `git stash` operation creates either two or three new commits. The commits in the diagram above are:

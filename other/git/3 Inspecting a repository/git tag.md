@@ -1,8 +1,18 @@
 # git tag
 
-# Git tag
+### 总结
 
-[git status](https://www.atlassian.com/git/tutorials/inspecting-a-repository)[git tag](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-tag)[git blame](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-blame)
+##### 为什么使用tag
+
+标识一个开发周期的结束
+
+##### 何时使用tag
+
+##### tag工作原理
+
+
+
+https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-blame)
 
 ## Tagging
 
@@ -17,6 +27,8 @@ git tag <tagname>
 ```
 
 Replace `<tagname>` with a semantic identifier to the state of the repo at the time the tag is being created. A common pattern is to use version numbers like `git tag v1.4`. Git supports two different types of tags, annotated and lightweight tags. The previous example created a lightweight tag. Lightweight tags and Annotated tags differ in the amount of accompanying meta data they store. A best practice is to consider Annotated tags as public, and Lightweight tags as private. Annotated tags store extra meta data such as: the tagger name, email, and date. This is important data for a public release. Lightweight tags are essentially 'bookmarks' to a commit, they are just a name and a pointer to a commit, useful for creating quick links to relevant commits.
+
+tag 有两种,一种是轻量级的。另一种是重量级的包含更多的信息
 
 ## Annotated Tags
 
@@ -90,7 +102,7 @@ This previous example uses the `-l` option and a wildcard expression of `-rc` wh
 
 The previous tagging examples have demonstrated operations on implicit commits. By default, `git tag` will create a tag on the commit that `HEAD` is referencing. Alternatively `git tag` can be passed as a ref to a specific commit. This will tag the passed commit instead of defaulting to `HEAD.` To gather a list of older commits execute the `git log` command.
 
-```
+```bash
 $ git log --pretty=oneline
  15027957951b64cf874c3557a0f3547bd83b3ff6 Merge branch 'feature'
  a6b4c97498bd301d84096da251c98a07c7723e65 add update method for thing

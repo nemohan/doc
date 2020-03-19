@@ -1,5 +1,3 @@
-# git blame
-
 # Git blame
 
 [git status](https://www.atlassian.com/git/tutorials/inspecting-a-repository)[git tag](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-tag)[git blame](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-blame)
@@ -7,6 +5,10 @@
 The `git blame` command is a versatile troubleshooting utility that has extensive usage options. The high-level function of `git blame` is the display of author metadata attached to specific committed lines in a file. This is used to examine specific points of a file's history and get context as to who the last author was that modified the line. This is used to explore the history of specific code and answer questions about what, how, and why the code was added to a repository.
 
 `Git blame` is often used with a GUI display. Online Git hosting sites like [Bitbucket](http://bitbucket.org/) offer *blame views* which are UI wrappers to `git blame`. These views are referenced in collaborative discussions around pull requests and commits. Additionally, most IDE's that have Git integration also have dynamic blame views.
+
+检查文件指定行的修改记录, 只能指出最后的进行修改的作者、日期。
+
+如何获取指定行的每次改动记录或作者？？？
 
 ## How It Works
 
@@ -18,7 +20,7 @@ git clone https://kevzettler@bitbucket.org/kevzettler/git-blame-example.git && c
 
 Now that we have a copy of the example code we can start exploring it with `git blame`. The state of the example repo can be examined using `git log`. The commit history should look like the following:
 
-```
+```bash
 $ git log
  commit 548dabed82e4e5f3734c219d5a742b1c259926b2
  Author: Juni Mukherjee <jmukherjee@atlassian.com>
@@ -56,7 +58,7 @@ git blame README.MD
 
 Executing the above command will give us our first sample of blame output. The following output is a subset of the full blame output of the README. Additionally, this output is static is reflective of the state of the repo at the time of this writing.
 
-```
+```bash
 $ git blame README.md
  82496ea3 (kevzettler 2018-02-28 13:37:02 -0800 1) # Git Blame example
  82496ea3 (kevzettler 2018-02-28 13:37:02 -0800 2)
@@ -119,7 +121,7 @@ While `git blame` displays the last author that modified a line, often times you
 
 To list all original commits in-which a specific code piece was added or modified execute `git log` with the `-S` option. Append the `-S` option with the code you are looking for. Let's take one of the lines from the README output above to use as an example. Let us take the text "CSS3D and WebGL renderers" from Line 12 of the README output.
 
-```
+```bash
 $ git log -S"CSS3D and WebGL renderers." --pretty=format:'%h %an %ad %s'
  e339d3c85 Mario Schuettel Tue Oct 13 16:51:06 2015 +0200 reverted README.md to original content
  509c2cc35 Daniel Tue Sep 8 13:56:14 2015 +0200 Updated README
