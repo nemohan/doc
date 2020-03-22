@@ -1,6 +1,8 @@
 # git reflog
 
-# git reflog
+引用日志
+
+记录引用更改的日志,可以用来恢复丢失的commit记录
 
 This page provides a detailed discussion of the `git reflog` command. Git keeps track of updates to the tip of branches using a mechanism called reference logs, or "reflogs." Many Git commands accept a parameter for specifying a reference or "ref", which is a pointer to a commit. Common examples include:
 
@@ -8,7 +10,7 @@ This page provides a detailed discussion of the `git reflog` command. Git keeps 
 - `git reset`
 - `git merge`
 
-Reflogs track when Git refs were updated in the local repository. In addition to branch tip reflogs, a special reflog is maintained for the Git stash. Reflogs are stored in directories under the local repository's `.git` directory. `git reflog` directories can be found at `.git/logs/refs/heads/.`, `.git/logs/HEAD`, and also `.git/logs/refs/stash` if the `git stash` has been used on the repo.
+<font color="red">Reflogs track when Git refs were updated in the local repository. In addition to branch tip reflogs, a special reflog is maintained for the Git stash. Reflogs are stored in directories under the local repository's `.git` directory. `git reflog` directories can be found at `.git/logs/refs/heads/.`, `.git/logs/HEAD`, and also `.git/logs/refs/stash` if the `git stash` has been used on the repo.</font>
 
 We discussed `git reflog` at a high level on the [Rewriting History Page](https://www.atlassian.com/git/tutorials/rewriting-history). This document will cover: extended configuration options of `git reflog`, common use-cases and pitfalls of `git reflog`, how to undo changes with `git reflog`, and more.
 
@@ -26,7 +28,7 @@ This is essentially a short cut that's equivalent to:
 git reflog show HEAD
 ```
 
-This will output the `HEAD` reflog. You should see output similar to:
+This will output the `HEAD` reflog(the content in .git/logs/HEAD). You should see output similar to:
 
 ```
 eff544f HEAD@{0}: commit: migrate existing content
@@ -53,10 +55,8 @@ You can get a complete reflog of all refs by executing:
 
 To see the reflog for a specific branch pass that branch name to `git reflog show`
 
-```
+```bash
 git reflog show otherbranch
-
-
 
 9a4491f otherbranch@{0}: commit: seperate articles into branch PRs
 35aee4a otherbranch{1}: commit (initial): initial commit add git-init and setting-up-a-repo docs
@@ -90,7 +90,6 @@ Every reflog entry has a timestamp attached to it. These timestamps can be lever
 - `1.month.ago`
 - `1.year.ago`
 - `2011-05-17.09:00:00`
-   
 
 Time qualifiers can be combined (e.g. `1.day.2.hours.ago`), Additionally plural forms are accepted (e.g. `5.minutes.ago`).
 
@@ -122,6 +121,10 @@ git reflog show master@{0}
 
 In addition, `git reflog show` is an alias for `git log -g --abbrev-commit --pretty=oneline`. Executing `git reflog show` will display the log for the passed <refid>.``
 
+
+
+===============ignoer this======================
+
 ### Expire - `git reflog expire`
 
 The expire subcommand cleans up old or unreachable reflog entries. The `expire` subcommand has potential for data loss. This subcommand is not typically used by end users, but used by git internally. Passing a `-n` or `--dry-run` option to `git reflog expire` Will perform a "dry run" which will output which reflog entries are marked to be pruned, but will not actually prune them.
@@ -132,7 +135,11 @@ By default, the reflog expiration date is set to 90 days. An expire time can be 
 
 The `delete` subcommand is self explanatory and will delete a passed in reflog entry. As with `expire`, `delete` has potential to lose data and is not commonly invoked by end users.
 
-## Recovering lost commits
+
+
+
+
+## <font color="red">Recovering lost commits</font>
 
 Git never really loses anything, even when performing history rewriting operations like rebasing or commit amending. For the next example let's assume that we have made some new changes to our repo. Our `git log --pretty=oneline` looks like the following:
 
@@ -205,4 +212,3 @@ In this tutorial we discussed the `git reflog` command. Some key points covered 
 - How specify and view time based reflog entries
 
 We briefly mentioned that `git reflog` can be used with other git commands like [git checkout](https://www.atlassian.com/git/tutorials/using-branches#git-checkout), [git reset](https://www.atlassian.com/git/tutorials/resetting-checking-out-and-reverting), and [git merge](https://www.atlassian.com/git/tutorials/git-merge). Learn more at their respective pages. For additional discussion on refs and the reflog, [learn more here](https://www.atlassian.com/git/tutorials/refs-and-the-reflog).
- 

@@ -1,12 +1,10 @@
 # git clean
 
-# Git Clean
-
 [git checkout](https://www.atlassian.com/git/tutorials/undoing-changes)[git clean](https://www.atlassian.com/git/tutorials/undoing-changes/git-clean)[git revert](https://www.atlassian.com/git/tutorials/undoing-changes/git-revert)[git reset](https://www.atlassian.com/git/tutorials/undoing-changes/git-reset)[git rm](https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
 
-In this section, we will focus on a detailed discussion of the `git clean` command. `Git clean` is to some extent an 'undo' command. `Git clean` can be considered complementary to other commands like `git reset` and `git checkout`. Whereas these other commands operate on files previously added to the Git tracking index, the `git clean` command operates on untracked files. Untracked files are files that have been created within your repo's working directory but have not yet been added to the repository's tracking index using the `git add` command. To better demonstrate the difference between tracked and untracked files consider the following command line example:
+In this section, we will focus on a detailed discussion of the `git clean` command. `Git clean` is to some extent an 'undo' command. `Git clean` can be considered complementary to other commands like `git reset` and `git checkout`. Whereas these other commands operate on files previously added to the Git tracking index, <font color="red">the `git clean` command operates on untracked files. Untracked files are files that have been created within your repo's working directory but have not yet been added to the repository's tracking index using the `git add` command. To better demonstrate the difference between tracked and untracked files consider the following command line example:</font>
 
-```
+```bash
 $ mkdir git_clean_test
 $ cd git_clean_test/
 $ git init .

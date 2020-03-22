@@ -1,6 +1,6 @@
-# git pull
-
 # git syncing
+
+git remote 有点类似设置远程仓库主机的意思
 
 [git remote](https://www.atlassian.com/git/tutorials/syncing#)[git fetch](https://www.atlassian.com/git/tutorials/syncing/git-fetch)[git push](https://www.atlassian.com/git/tutorials/syncing/git-push)[git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull)
 
@@ -14,7 +14,7 @@ The `git remote` command lets you create, view, and delete connections to other 
 
 For example, the following diagram shows two remote connections from your repo into the central repo and another developer’s repo. Instead of referencing them by their full URLs, you can pass the origin and john shortcuts to other Git commands.
 
-
+![1584847129852](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584847129852.png)
 
 ## Git remote usage overview
 
@@ -34,7 +34,7 @@ git remote -v
 
 Same as the above command, but include the URL of each connection.
 
-## Creating and modifying git remote configurations
+## <font color="red">Creating and modifying git remote configurations</font>
 
 The `git remote` command is also a convenience or 'helper' method for modifying a repo's `./.git/config` file. The commands presented below let you manage connections with other repositories. The following commands will modify the repo's `/.git/config` file. The result of the following commands can also be achieved by directly editing the `./.git/config` file with a text editor.
 
@@ -94,11 +94,19 @@ Accepts a `-f` option, that will `git fetch <name>` immediately after the remote
 
 Accepts a `--tags` option, that will `git fetch <name>` immediately and import every tag from the remote repository.
 
+
+
+##### rename 子命令
+
 ```
 RENAME  
 ```
 
 Updates `./.git/config` to rename the record <OLD> to <NEW>. All remote-tracking branches and configuration settings for the remote are updated.
+
+
+
+##### remove 子命令
 
 ```
 REMOVE or RM 
@@ -190,6 +198,8 @@ git remote show upstream
  Local ref configured for 'git push':
  master pushes to master (fast-forwardable)
 ```
+
+
 
 ## Fetching and pulling from Git remotes
 

@@ -1,12 +1,10 @@
 # git rm
 
-# Git RM
+https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
 
-[git checkout](https://www.atlassian.com/git/tutorials/undoing-changes)[git clean](https://www.atlassian.com/git/tutorials/undoing-changes/git-clean)[git revert](https://www.atlassian.com/git/tutorials/undoing-changes/git-revert)[git reset](https://www.atlassian.com/git/tutorials/undoing-changes/git-reset)[git rm](https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
 
- 
 
-A common question when getting started with Git is "How do I tell Git not to track a file (or files) any more?" The `git rm` command is used to remove files from a Git repository. It can be thought of as the inverse of the `git add` command.
+<font color="red">A common question when getting started with Git is "How do I tell Git not to track a file (or files) any more?" The `git rm` command is used to remove files from a Git repository. It can be thought of as the inverse of the `git add` command.</font>
 
 ## Git rm Overview
 
@@ -15,10 +13,6 @@ The `git rm` command can be used to remove individual files or a collection of f
 Note that `git rm` does not remove branches. Learn more about [using git branches](https://www.atlassian.com/git/tutorials/using-branches)
 
 ## Usage
-
-```
-…
-```
 
 Specifies the target files to remove. The option value can be an individual file, a space delimited list of files `file1 file2 file3`, or a wildcard file glob `(~./directory/*)`.
 
@@ -29,12 +23,16 @@ Specifies the target files to remove. The option value can be an individual file
 
 The `-f`option is used to override the safety check that Git makes to ensure that the files in `HEAD` match the current content in the staging index and working directory.
 
+
+
 ```
 -n
 --dry-run
 ```
 
-The "dry run" option is a safeguard that will execute the `git rm`command but not  actually delete the files. Instead it will output which files it would have removed.
+<font color="red">The "dry run" option is a safeguard that will execute the `git rm`command but not  actually delete the files. Instead it will output which files it would have removed.</font>
+
+
 
 ```
 -r
@@ -91,7 +89,7 @@ The <`file>` argument given to the command can be exact paths, wildcard file glo
 
 Wildcard file globbing matches across directories. It is important to be cautious when using wildcard globs. Consider the examples: `directory/*` and `directory*`. The first example will remove all sub files of `directory/` whereas the second example will remove all sibling directories like `directory1``directory2``directory_whatever` which may be an unexpected result.
 
-## The scope of git rm
+## <font color="red">The scope of git rm</font>
 
 The `git rm` command operates on the current branch only. The removal event is only applied to the working directory and staging index trees. The file removal is not persisted to the repository history until a new commit is created.
 

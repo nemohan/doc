@@ -1,10 +1,8 @@
 # git rebase
 
-# git rebase
 
-## 
 
-## 
+
 
 This document will serve as an in-depth discussion of the `git rebase` command. The Rebase command has also been looked at on the [setting up a repository](https://www.atlassian.com/git/tutorials/setting-up-a-repository) and [rewriting history](https://www.atlassian.com/git/tutorials/rewriting-history) pages. This page will take a more detailed look at `git rebase` configuration and execution. Common Rebase use cases and pitfalls will be covered here.
 

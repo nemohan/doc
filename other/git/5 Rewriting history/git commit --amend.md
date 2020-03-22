@@ -14,7 +14,7 @@ Git has several mechanisms for storing history and saving changes. These mechani
 
 ## Changing the Last Commit: `git commit --amend`
 
-The `git commit --amend` command is a convenient way to modify the most recent commit. It lets you combine staged changes with the previous commit instead of creating an entirely new commit. It can also be used to simply edit the previous commit message without changing its snapshot. But, amending does not just alter the most recent commit, it replaces it entirely, meaning the amended commit will be a new entity with its own ref. To Git, it will look like a brand new commit, which is visualized with an asterisk (*) in the diagram below. There are a few common scenarios for using `git commit --amend`. We'll cover usage examples in the following sections.
+<font color="red">The `git commit --amend` command is a convenient way to modify the most recent commit. It lets you combine staged changes with the previous commit instead of creating an entirely new commit. It can also be used to simply edit the previous commit message without changing its snapshot. But, amending does not just alter the most recent commit, it replaces it entirely, meaning the amended commit will be a new entity with its own ref. To Git, it will look like a brand new commit, which is visualized with an asterisk (*) in the diagram below. There are a few common scenarios for using `git commit --amend`. We'll cover usage examples in the following sections.</font>
 
 
 
@@ -46,7 +46,7 @@ git commit --amend --no-edit
 
 The `--no-edit` flag will allow you to make the amendment to your commit without changing its commit message. The resulting commit will replace the incomplete one, and it will look like we committed the changes to `hello.py` and `main.py` in a single snapshot.
 
-### Don’t amend public commits
+### <font color="red">Don’t amend public commits</font>
 
 Amended commits are actually entirely new commits and the previous commit will no longer be on your current branch. This has the same consequences as resetting a public snapshot. Avoid amending a commit that other developers have based their work on. This is a confusing situation for developers to be in and it’s complicated to recover from.
 
@@ -54,11 +54,15 @@ Amended commits are actually entirely new commits and the previous commit will n
 
 To review, `git commit --amend` lets you take the most recent commit and add new staged changes to it. You can add or remove changes from the Git staging area to apply with a `--amend` commit. If there are no changes staged, a `--amend` will still prompt you to modify the last commit message log. Be cautious when using `--amend` on commits shared with other team members. Amending a commit that is shared with another user will potentially require confusing and lengthy merge conflict resolutions.
 
-## Changing older or multiple commits
+## <font color="red">Changing older or multiple commits</font>
 
-To modify older or multiple commits, you can use `git rebase` to combine a sequence of commits into a new base commit. In standard mode, `git rebase` allows you to literally rewrite history — automatically applying commits in your current working branch to the passed branch head. Since your new commits will be replacing the old, it's important to not use `git rebase` on commits that have been pushed public, or it will appear that your project history disappeared.
+<font color="red">To modify older or multiple commits, you can use `git rebase` to combine a sequence of commits into a new base commit. In standard mode, `git rebase` allows you to literally rewrite history — automatically applying commits in your current working branch to the passed branch head. Since your new commits will be replacing the old, it's important to not use `git rebase` on commits that have been pushed public, or it will appear that your project history disappeared.</font>
 
 In these or similar instances where it's important to preserve a clean project history, adding the `-i` option to `git rebase` allows you to run `rebase interactive`. This gives you the opportunity to alter individual commits in the process, rather than moving all commits. You can learn more about interactive rebasing and additional rebase commands on the [git rebase page](https://www.atlassian.com/git/tutorials/rewriting-history/git-rebase).
+
+使用动机:
+
+合并多个commit为一个commit
 
 #### Changing committed files
 
@@ -93,7 +97,7 @@ Each regular Git commit will have a log message explaining what happened in the 
 
 The `s` "squash" command is where we see the true utility of rebase. Squash allows you to specify which commits you want to merge into the previous commits. This is what enables a "clean history." During rebase playback, Git will execute the specified rebase command for each commit. In the case of squash commits, Git will open your configured text editor and prompt to combine the specified commit messages. This entire process can be visualized as follows:
 
-
+![1584674833375](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584674833375.png)
 
 Note that the commits modified with a rebase command have a different ID than either of the original commits. Commits marked with pick will have a new ID if the previous commits have been rewritten.
 
