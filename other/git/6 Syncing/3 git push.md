@@ -6,35 +6,35 @@ The `git push` command is used to upload local repository content to a remote re
 
 ## Git push usage
 
-```
-git push  
+```bash
+git push  <remote> <branch>
 ```
 
 Push the specified branch to <remote>, along with all of the necessary commits and internal objects. This creates a local branch in the destination repository. To prevent you from overwriting commits, Git won’t let you push when it results in a non-fast-forward merge in the destination repository.
 
 ```
-git push  --force
+git push  <remote> --force
 ```
 
-Same as the above command, but force the push even if it results in a non-fast-forward merge. Do not use the `--force` flag unless you’re absolutely sure you know what you’re doing.
+<font color="red">Same as the above command, but force the push even if it results in a non-fast-forward merge. Do not use the `--force` flag unless you’re absolutely sure you know what you’re doing.</font>
 
 ```
-git push  --all
+git push <remote> --all
 ```
 
 Push all of your local branches to the specified remote.
 
-```
-git push  --tags
+```bash
+git push  <remote> --tags
 ```
 
-Tags are not automatically pushed when you push a branch or use the `--all` option. The `--tags` flag sends all of your local tags to the remote repository.
+<font color="green">Tags are not automatically pushed when you push a branch or use the `--all` option. The `--tags` flag sends all of your local tags to the remote repository.</font>
 
 ## Git push discussion
 
 `git push` is most commonly used to publish an upload local changes to a central repository. After a local repository has been modified a push is executed to share the modifications with remote team members.
 
-
+![1584932328862](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584932328862.png)
 
 The above diagram shows what happens when your local `master` has progressed past the central repository’s `master` and you publish changes by running `git push origin master`. Notice how `git push` is essentially the same as running `git merge master` from inside the remote repository.
 
@@ -46,7 +46,7 @@ The above diagram shows what happens when your local `master` has progressed pas
 
 A frequently used, modern Git practice is to have a remotely hosted `--bare` repository act as a central origin repository. This origin repository is often hosted off-site with a trusted 3rd party like Bitbucket. Since pushing messes with the remote branch structure, It is safest and most common to push to repositories that have been created with the `--bare` flag. Bare repos don’t have a working directory so a push will not alter any in progress working directory content. For more information on bare repository creation, read about `git init`.
 
-## Force Pushing
+## <font color="red">Force Pushing</font>
 
 Git prevents you from overwriting the central repository’s history by refusing push requests when they result in a non-fast-forward merge. So, if the remote history has diverged from your history, you need to pull the remote branch and merge it into your local one, then try pushing again. This is similar to how SVN makes you synchronize with the central repository via `svn update` before committing a changeset.
 
@@ -58,7 +58,7 @@ The `--force` flag overrides this behavior and makes the remote repository’s b
 
 The following example describes one of the standard methods for publishing local contributions to the central repository. First, it makes sure your local master is up-to-date by fetching the central repository’s copy and rebasing your changes on top of them. The interactive rebase is also a good opportunity to clean up your commits before sharing them. Then, the `git push` command sends all of the commits on your local master to the central repository.
 
-```
+```bash
 git checkout master
 git fetch origin master
 git rebase -i origin/master
