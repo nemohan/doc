@@ -471,7 +471,9 @@ In the *Conceptual Overview* section, we saw how a feature branch can incorporat
 
 This use of `git rebase` is similar to a local cleanup (and can be performed simultaneously), but in the process it incorporates those upstream commits from `master`.
 
-Keep in mind that it’s perfectly legal to rebase onto a remote branch instead of `master`. This can happen when collaborating on the same feature with another developer and you need to incorporate their changes into your repository.
+注意: 下面说的是same feature 而不是same branch
+
+<font color="green">Keep in mind that it’s perfectly legal to rebase onto a remote branch instead of `master`. This can happen when collaborating on the same feature with another developer and you need to incorporate their changes into your repository.</font>
 
 For example, if you and another developer named John added commits to the `feature` branch, your repository might look like the following after fetching the remote `feature` branch from John’s repository:
 
@@ -489,7 +491,7 @@ You can resolve this fork the exact same way as you integrate upstream changes f
 
 ![1585011146545](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011146545.png)
 
-Note that this rebase doesn’t violate the *Golden Rule of Rebasing*  because only your local `feature` commits are being moved—everything before that is untouched. This is like saying, “add my changes to what John has already done.” In most circumstances, this is more intuitive than synchronizing with the remote branch via a merge commit.
+<font color="green">Note that this rebase doesn’t violate the *Golden Rule of Rebasing*  because only your local `feature` commits are being moved—everything before that is untouched. This is like saying, “add my changes to what John has already done.” In most circumstances, this is more intuitive than synchronizing with the remote branch via a merge commit.</font>
 
 By default, the `git pull` command performs a merge, but you can force it to integrate the remote branch with a rebase by passing it the `--rebase` option.
 
@@ -501,7 +503,9 @@ Any changes from other developers need to be incorporated with `git merge` inste
 
 For this reason, it’s usually a good idea to clean up your code with an interactive rebase *before* submitting your pull request.
 
-### Integrating an Approved Feature
+
+
+### <font color="green">Integrating an Approved Feature</font>
 
 After a feature has been approved by your team, you have the option of rebasing the feature onto the tip of the `master` branch before using `git merge` to integrate the feature into the main code base.
 

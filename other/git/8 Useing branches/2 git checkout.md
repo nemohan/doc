@@ -1,10 +1,10 @@
-# git merge
+
 
 # Git Checkout
 
  
 
-This page is an examination of the `git checkout` command. It will cover usage examples and edge cases. In Git terms, a "checkout" is the act of switching between different versions of a target entity. The `git checkout` command operates upon three distinct entities: files, commits, and branches. In addition to the definition of "checkout" the phrase "checking out" is commonly used to imply the act of executing the `git checkout` command. In the [Undoing Changes](https://www.atlassian.com/git/tutorials/undoing-changes) topic, we saw how `git checkout` can be used to view old commits. The focus for the majority of this document will be checkout operations on branches.
+This page is an examination of the `git checkout` command. It will cover usage examples and edge cases. In Git terms, a "checkout" is the act of switching between different versions of a target entity.<font color="green"> The `git checkout` command operates upon three distinct entities: files, commits, and branches.</font> In addition to the definition of "checkout" the phrase "checking out" is commonly used to imply the act of executing the `git checkout` command. In the [Undoing Changes](https://www.atlassian.com/git/tutorials/undoing-changes) topic, we saw how `git checkout` can be used to view old commits. The focus for the majority of this document will be checkout operations on branches.
 
 Checking out branches is similar to checking out old commits and files in that the working directory is updated to match the selected branch/revision; however, new changes are saved in the project history—that is, it’s not a read-only operation.
 
@@ -14,7 +14,7 @@ The `git checkout` command lets you navigate between the branches created by `gi
 
 Having a dedicated branch for each new feature is a dramatic shift from a traditional SVN workflow. It makes it ridiculously easy to try new experiments without the fear of destroying existing functionality, and it makes it possible to work on many unrelated features at the same time. In addition, branches also facilitate several collaborative workflows.
 
-The `git checkout` command may occasionally be confused with `git clone`. The difference between the two commands is that clone works to fetch code from a remote repository, alternatively checkout works to switch between versions of code already on the local system.
+<font color="green">The `git checkout` command may occasionally be confused with `git clone`. The difference between the two commands is that clone works to fetch code from a remote repository, alternatively checkout works to switch between versions of code already on the local system.</font>
 
 ## Usage: Existing branches
 
@@ -44,7 +44,7 @@ The above example simultaneously creates and checks out `<new-branch>`. The `-b`
 git checkout -b <new-branch> <existing-branch>
 ```
 
-By default `git checkout -b` will base the `new-branch` off the current `HEAD`. An optional additional branch parameter can be passed to `git checkout`. In the above example, `<existing-branch>` is passed which then bases `new-branch` off of `existing-branch` instead of the current `HEAD`.
+<font color="green">By default `git checkout -b` will base the `new-branch` off the current `HEAD`. An optional additional branch parameter can be passed to `git checkout`. In the above example, `<existing-branch>` is passed which then bases `new-branch` off of `existing-branch` instead of the current `HEAD`.</font>
 
 ## Switching Branches
 
@@ -56,7 +56,9 @@ git checkout <branchname>
 
 Git tracks a history of checkout operations in the reflog. You can execute `git reflog` to view the history.
 
-## Git Checkout a Remote Branch
+
+
+## <font color="green">Git Checkout a Remote Branch</font>
 
 When collaborating with a team it is common to utilize remote repositories. These repositories may be hosted and shared or they may be another colleague's local copy. Each remote repository will contain its own set of branches. In order to checkout a remote branch you have to first fetch the contents of the branch.
 
@@ -70,7 +72,7 @@ In modern versions of Git, you can then checkout the remote branch like a local 
 git checkout <remotebranch>
 ```
 
-Older versions of Git require the creation of a new branch based on the `remote`.
+<font color="red">Older versions of Git require the creation of a new branch based on the `remote`.</font>
 
 ```
 git checkout <remotebranch> origin/<remotebranch>

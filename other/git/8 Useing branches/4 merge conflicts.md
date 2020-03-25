@@ -1,5 +1,3 @@
-# Merge conflicts
-
 # Git merge conflicts
 
 Version control systems are all about managing contributions between multiple distributed authors ( usually developers ). Sometimes multiple developers may try to edit the same content. If Developer A tries to edit code that Developer B is editing a conflict may occur. To alleviate the occurrence of conflicts developers will work in separate [isolated branches](https://www.atlassian.com/git/tutorials/using-branches). The `git merge` command's primary responsibility is to combine separate branches and resolve any conflicting edits.

@@ -1,11 +1,9 @@
 # git branch
 
-# Git Branch
 
+This document is an in-depth review of the `git branch` command and a discussion of the overall Git branching model. Branching is a feature available in most modern version control systems. Branching in other VCS's can be an expensive operation in both time and disk space. In Git, branches are a part of your everyday development process. <font color="green">Git branches are effectively a pointer to a snapshot of your changes. When you want to add a new feature or fix a bug—no matter how big or how small—you spawn a new branch to encapsulate your changes. This makes it harder for unstable code to get merged into the main code base, and it gives you the chance to clean up your future's history before merging it into the main branch.</font>
 
-This document is an in-depth review of the `git branch` command and a discussion of the overall Git branching model. Branching is a feature available in most modern version control systems. Branching in other VCS's can be an expensive operation in both time and disk space. In Git, branches are a part of your everyday development process. Git branches are effectively a pointer to a snapshot of your changes. When you want to add a new feature or fix a bug—no matter how big or how small—you spawn a new branch to encapsulate your changes. This makes it harder for unstable code to get merged into the main code base, and it gives you the chance to clean up your future's history before merging it into the main branch.
-
-
+![1585098327438](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585098327438.png)
 
 The diagram above visualizes a repository with two isolated lines of development, one for a little feature, and one for a longer-running feature. By developing them in branches, it’s not only possible to work on both of them in parallel, but it also keeps the main `master` branch free from questionable code.
 
@@ -43,7 +41,7 @@ Delete the specified branch. This is a “safe” operation in that Git prevents
 git branch -D <branch>
 ```
 
-Force delete the specified branch, even if it has unmerged changes. This is the command to use if you want to permanently throw away all of the commits associated with a particular line of development.
+<font color="green">Force delete the specified branch, even if it has unmerged changes. This is the command to use if you want to permanently throw away all of the commits associated with a particular line of development.</font>
 
 ```
 git branch -m <branch>
@@ -59,9 +57,9 @@ List all remote branches.
 
 ## Creating Branches
 
-It's important to understand that branches are just pointers to commits. When you create a branch, all Git needs to do is create a new pointer, it doesn’t change the repository in any other way. If you start with a repository that looks like this:
+<font color="green">It's important to understand that branches are just pointers to commits. When you create a branch, all Git needs to do is create a new pointer, it doesn’t change the repository in any other way. If you start with a repository that looks like this:</font>
 
-
+![1585100939332](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585100939332.png)
 
 Then, you create a branch using the following command:
 
@@ -71,7 +69,7 @@ git branch crazy-experiment
 
 The repository history remains unchanged. All you get is a new pointer to the current commit:
 
-
+![1585100961457](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585100961457.png)
 
 Note that this only *creates* the new branch. To start adding commits to it, you need to select it with `git checkout`, and then use the standard `git add` and `git commit` commands. 
 
@@ -111,7 +109,7 @@ git branch -D crazy-experiment
 
 This deletes the branch regardless of its status and without warnings, so use it judiciously.
 
-The previous commands will delete a local copy of a branch. The branch may still exist in remote repos. To delete a remote branch execute the following.
+<font color="green">The previous commands will delete a local copy of a branch. The branch may still exist in remote repos. To delete a remote branch execute the following.</font>
 
 ```
 git push origin --delete crazy-experiment
