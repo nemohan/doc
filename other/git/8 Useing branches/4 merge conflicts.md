@@ -8,7 +8,7 @@ Merging and conflicts are a common part of the Git experience. Conflicts in othe
 
 Conflicts generally arise when two people have changed the same lines in a file, or if one developer deleted a file while another developer was modifying it. In these cases, Git cannot automatically determine what is correct. Conflicts only affect the developer conducting the merge, the rest of the team is unaware of the conflict. Git will mark the file as being conflicted and halt the merging process. It is then the developers' responsibility to resolve the conflict.
 
-## Types of merge conflicts
+## <font color="green">Types of merge conflicts</font>
 
 A merge can enter a conflicted state at two separate points. When starting and during a merge process. The following is a discussion of how to address each of these conflict scenarios.
 
@@ -32,7 +32,7 @@ error: Entry '' would be overwritten by merge. Cannot merge. (Changes in staging
 
 In order to get real familiar with merge conflicts, the next section will simulate a conflict to later examine and resolve. The example will be using a Unix-like command-line Git interface to execute the example simulation.
 
-```
+```bash
 $ mkdir git-merge-test
 $ cd git-merge-test
 $ git init .
@@ -52,7 +52,7 @@ This code example executes a sequence of commands that accomplish the following.
 
 Now we have a new repo with one branch `master` and a file `merge.txt` with content in it. Next, we will create a new branch to use as the conflicting merge.
 
-```
+```bash
 $ git checkout -b new_branch_to_merge_later
 $ echo "totally different content to merge later" > merge.txt
 $ git commit -am"edited the content of merge.txt to cause a conflict"
@@ -157,7 +157,7 @@ The status command is in frequent use when a working with Git and during a merge
 git log --merge
 ```
 
-Passing the `--merge` argument to the `git log` command will produce a log with a list of commits that conflict between the merging branches.
+<font color="red">Passing the `--merge` argument to the `git log` command will produce a log with a list of commits that conflict between the merging branches.</font>
 
 ```
 git diff

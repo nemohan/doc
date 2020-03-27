@@ -1,22 +1,30 @@
 # Git Merge Strategy Options and Examples
 
+合并策略 指找到两个分支的共同祖先（共同的基点)的方法. 有以下几种策略
+
+* 递归
+* resolve
+* 章鱼
+* ours
+* subtree
+
 When a piece of work is complete, tested and ready to be merged back into the main line of development, your team has some policy choices to make. What are your merge strategy options? In this article we'll examine the possibilities and then provide some notes on how Atlassian operates. Hopefully at the end you'll have the tools to decide what works best for your team.
 
 ## Git Merge Strategies
 
-A merge happens when combining two branches. Git will take two (or more) commit pointers and attempt to find a common base commit between them. Git has several different methods to find a base commit, these methods are called "merge strategies". Once Git finds a common base commit it will create a new "merge commit" that combines the changes of the specified merge commits. Technically, a merge commit is a regular commit which just happens to have two parent commits.
+<font color="green">A merge happens when combining two branches. Git will take two (or more) commit pointers and attempt to find a common base commit between them. Git has several different methods to find a base commit, these methods are called "merge strategies". Once Git finds a common base commit it will create a new "merge commit" that combines the changes of the specified merge commits. Technically, a merge commit is a regular commit which just happens to have two parent commits.</font>
 
-
+![1585183456082](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585183456082.png)
 
 `git merge` will automatically select a merge strategy unless explicitly specified. The `git merge` and `git pull` commands can be passed an `-s` (strategy) option. The `-s` option can be appended with the name of the desired merge strategy. If not explicitly specified, Git will select the most appropriate merge strategy based on the provided branches. The following is a list of the available merge strategies.
 
-### Recursive
+### Recursive 
 
 ```
 git merge -s recursive branch1 branch2
 ```
 
-This operates on two heads. Recursive is the default merge strategy when pulling or merging one branch. Additionally this can detect and handle merges involving renames, but currently cannot make use of detected copies. This is the default merge strategy when pulling or merging one branch.
+<font color="green">This operates on two heads. Recursive is the default merge strategy when pulling or merging one branch. Additionally this can detect and handle merges involving renames, but currently cannot make use of detected copies. This is the default merge strategy when pulling or merging one branch.</font>
 
 ### Resolve
 
@@ -26,7 +34,7 @@ git merge -s resolve branch1 branch2
 
 This can only resolve two heads using a 3-way merge algorithm. It tries to carefully detect cris-cross merge ambiguities and is considered generally safe and fast.
 
-### Octopus
+### Octopus(章鱼)
 
 ```
 git merge -s octopus branch1 branch2 branch3 branchN
@@ -64,9 +72,19 @@ Whereas explicit merges create a merge commit, implicit merges do not. An implic
 
 Another type of implicit merge is a squash. A squash can be performed during an [interactive rebase](https://www.atlassian.com/git/tutorials/rewriting-history/git-rebase). A squash merge will take the commits from a target branch and combine or squash them in to one commit. This commit is then appended to the `HEAD` of the merge base branch. A squash is commonly used to keep a 'clean history' during a merge. The target merge branch can have a verbose history of frequent commits. When squashed and merged the target branches commit history then becomes a singular squashed 'branch commit'. This technique is useful with `git workflows` that utilize feature branches.
 
-## `git checkout master Switched to branch 'master' echo "content to append" >> merge.txt git commit -am"appended content to merge.txt" [master 24fbe3c] appended content to merge.tx 1 file changed, 1 insertion(+)`
+~~~
+$ git checkout master
+Switched to branch 'master' 
+$ echo "content to append" >> merge.txt
+$ git commit -am"appended content to merge.txt" 
+[master 24fbe3c] appended content to merge.tx 1 file changed, 1 insertion(+)
+~~~
 
-The 'recursive' strategy introduced above, has its own subset of additional operation options.
+
+
+
+
+<font color="red">The 'recursive' strategy introduced above, has its own subset of additional operation options.</font>
 
 ```
 ours
@@ -133,7 +151,7 @@ subtree
 
 This option borrows from the `subtree` strategy. Where the strategy operates on two trees and modifies how to make them match on a shared ancestor, this option instead operates on the path metadata of the tree to make them match.
 
-## Our Git Merge Policy
+## <font color="red">Our Git Merge Policy</font>
 
 Atlassian strongly prefers using explicit merges. The reason is very simple: explicit merges provide great traceability and context on the features being merged. A local history clean-up rebase before sharing a feature branch for review is absolutely encouraged, but this does not change the policy at all. It augments it.
 
