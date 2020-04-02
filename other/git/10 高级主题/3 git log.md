@@ -1,18 +1,25 @@
 # Advanced Git log
 
+git log 两大功能点:
+
+* 格式化输出
+* 过滤输出
+
+
+
 [Formatting Log Output](https://www.atlassian.com/git/tutorials/git-log#formatting-log-output)[Filtering the Commit History](https://www.atlassian.com/git/tutorials/git-log#filtering-the-commit-history)[Summary](https://www.atlassian.com/git/tutorials/git-log#summary)
 
 The purpose of any version control system is to record changes to your code. This gives you the power to go back into your project history to see who contributed what, figure out where bugs were introduced, and revert problematic changes. But, having all of this history available is useless if you don’t know how to navigate it. That’s where the git log command comes in.
 
 By now, you should already know the basic git log command for displaying commits. But, you can alter this output by passing many different parameters to git log.
 
-The advanced features of git log can be split into two categories: formatting how each commit is displayed, and filtering which commits are included in the output. Together, these two skills give you the power to go back into your project and find any information that you could possibly need.
+<font color="green">The advanced features of git log can be split into two categories: formatting how each commit is displayed, and filtering which commits are included in the output. Together, these two skills give you the power to go back into your project and find any information that you could possibly need.</font>
 
 ## Formatting Log Output
 
 First, this article will take a look at the many ways in which `git log`’s output can be formatted. Most of these come in the form of flags that let you request more or less information from `git log`.
 
-If you don’t like the default `git log` format, you can use `git config`’s aliasing functionality to create a shortcut for any of the formatting options discussed below. Please see in [The git config Command](https://www.atlassian.com/git/tutorials/setting-up-a-repository#git-config) for how to set up an alias.
+<font color="green">If you don’t like the default `git log` format, you can use `git config`’s aliasing functionality to create a shortcut for any of the formatting options discussed below. Please see in [The git config Command](https://www.atlassian.com/git/tutorials/setting-up-a-repository#git-config) for how to set up an alias.</font>
 
 ### Oneline
 
@@ -27,9 +34,9 @@ ad8621a Fix a bug in the feature
 
 This is very useful for getting a high-level overview of your project.
 
-### Decorating
+### <font color="green">Decorating</font>
 
-Many times it’s useful to know which branch or tag each commit is associated with. The `--decorate` flag makes `git log` display all of the references (e.g., branches, tags, etc) that point to each commit.
+<font color="green">Many times it’s useful to know which branch or tag each commit is associated with. The `--decorate` flag makes `git log` display all of the references (e.g., branches, tags, etc) that point to each commit.</font>
 
 This can be combined with other configuration options. For example, running `git log --oneline --decorate` will format the commit history like so:
 
@@ -83,9 +90,9 @@ index 18ca709..c673b40 100644
 
 For commits with a lot of changes, the resulting output can become quite long and unwieldy. More often than not, if you’re displaying a full patch, you’re probably searching for a specific change. For this, you want to use the pickaxe option.
 
-### The Shortlog
+### <font color="green">The Shortlog</font>
 
-The `git shortlog` command is a special version of `git log`intended for creating release announcements. It groups each commit by author and displays the first line of each commit message. This is an easy way to see who’s been working on what.
+<font color="green">The `git shortlog` command is a special version of `git log`intended for creating release announcements. It groups each commit by author and displays the first line of each commit message. This is an easy way to see who’s been working on what.</font>
 
 For example, if two developers have contributed 5 commits to a project, the `git shortlog` output might look like the following:
 
@@ -100,7 +107,7 @@ John (3):
  Merge branch 'feature'
 ```
 
-By default, `git shortlog` sorts the output by author name, but you can also pass the `-n` option to sort by the number of commits per author.
+<font color="green">By default, `git shortlog` sorts the output by author name, but you can also pass the `-n` option to sort by the number of commits per author.</font>
 
 ### Graphs
 
@@ -123,7 +130,7 @@ For a simple repository with just 2 branches, this will produce the following:
 * 160e224 Add the initial code base
 ```
 
-The asterisk shows which branch the commit was on, so the above graph tells us that the `23ad9ad` and `16b36c6` commits are on a topic branch and the rest are on the `master` branch.
+<font color="green">The asterisk shows which branch the commit was on, so the above graph tells us that the `23ad9ad` and `16b36c6` commits are on a topic branch and the rest are on the `master` branch.</font>
 
 While this is a nice option for simple repositories, you’re probably better off with a more full-featured visualization tool like `gitk` or[Sourcetree](https://www.atlassian.com/software/sourcetree/overview) for projects that are heavily branched.
 
@@ -148,7 +155,7 @@ John committed f12ca28 on Wed Jun 22 13:50:31 2014 -0500
 
 The complete list of placeholders can be found in the [Pretty Formats](https://www.kernel.org/pub/software/scm/git/docs/git-log.html#_pretty_formats) section of the `git log` manual page.
 
-Aside from letting you view only the information that you’re interested in, the `--pretty=format:"<string>"` option is particularly useful when you’re trying to pipe `git log` output into another command.
+<font color="green">Aside from letting you view only the information that you’re interested in, the `--pretty=format:"<string>"` option is particularly useful when you’re trying to pipe `git log` output into another command.</font>
 
 ## Filtering the Commit History
 
@@ -164,7 +171,7 @@ You can limit `git log`’s output by including the `-<n>` option. For example, 
 git log -3
 ```
 
-### By Date
+### <font color="green">By Date</font>
 
 If you’re looking for a commit from a specific time frame, you can use the `--after` or `--before` flags for filtering commits by date. These both accept a variety of date formats as a parameter. For example, the following command only shows commits that were created *after* July 1st, 2014 (inclusive):
 
@@ -218,7 +225,7 @@ git log --grep="JRA-224:"
 
 You can also pass in the `-i` parameter to `git log` to make it ignore case differences while pattern matching.
 
-### By File
+### <font color="green">By File</font>
 
 Many times, you’re only interested in changes that happened to a particular file. To show the history related to a file, all you have to do is pass in the file path. For example, the following returns all commits that affected either the `foo.py` or the `bar.py` file:
 
@@ -228,7 +235,7 @@ git log -- foo.py bar.py
 
 The `--` parameter is used to tell `git log` that subsequent arguments are file paths and not branch names. If there’s no chance of mixing it up with a branch, you can omit the `--`.
 
-### By Content
+### <font color="green">By Content</font>
 
 It’s also possible to search for commits that introduce or remove a particular line of source code. This is called a *pickaxe*, and it takes the form of `-S"<string>"`. For example, if you want to know when the string *Hello, World!* was added to any file in the project, you would use the following command:
 
@@ -256,7 +263,7 @@ git log master..feature
 
 The `master..feature` range contains all of the commits that are in the `feature` branch, but aren’t in the `master` branch. In other words, this is how far `feature` has progressed since it forked off of `master`. You can visualize this as follows:
 
-
+![1585528332318](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585528332318.png)
 
 Note that if you switch the order of the range (`feature..master`), you will get all of the commits in `master`, but not in `feature`. If `git log` outputs commits for both versions, this tells you that your history has diverged.
 

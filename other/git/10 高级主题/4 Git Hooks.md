@@ -18,7 +18,7 @@ Hooks can reside in either local or server-side repositories, and they are only 
 
 ### Installing Hooks
 
-Hooks reside in the `.git/hooks` directory of every Git repository. Git automatically populates this directory with example scripts when you initialize a repository. If you take a look inside `.git/hooks`, you’ll find the following files:
+<font color="green">Hooks reside in the `.git/hooks` directory of every Git repository. Git automatically populates this directory with example scripts when you initialize a repository. If you take a look inside `.git/hooks`, you’ll find the following files:</font>
 
 ```
 applypatch-msg.sample pre-push.sample
@@ -48,9 +48,9 @@ You should now see this message in place of the default commit message every tim
 
 The built-in sample scripts are very useful references, as they document the parameters that are passed in to each hook (they vary from hook to hook).
 
-### Scripting Languages
+### <font color="green">Scripting Languages</font>
 
-The built-in scripts are mostly shell and PERL scripts, but you can use any scripting language you like as long as it can be run as an executable. The shebang line (`#!/bin/sh`) in each script defines how your file should be interpreted. So, to use a different language, all you have to do is change it to the path of your interpreter.
+<font color="green">The built-in scripts are mostly shell and PERL scripts, but you can use any scripting language you like as long as it can be run as an executable. The shebang line (`#!/bin/sh`) in each script defines how your file should be interpreted. So, to use a different language, all you have to do is change it to the path of your interpreter.</font>
 
 For instance, we can write an executable Python script in the `prepare-commit-msg` file instead of using shell commands. The following hook will do the same thing as the shell script in the previous section.
 
@@ -70,15 +70,15 @@ This is a very powerful feature for Git hooks because it lets you work in whatev
 
 ### Scope of Hooks
 
-Hooks are local to any given Git repository, and they are *not*copied over to the new repository when you run `git clone`. And, since hooks are local, they can be altered by anybody with access to the repository.
+<font color="red">Hooks are local to any given Git repository, and they are *not* copied over to the new repository when you run `git clone`. And, since hooks are local, they can be altered by anybody with access to the repository.</font>
 
-This has an important impact when configuring hooks for a team of developers. First, you need to find a way to make sure hooks stay up-to-date amongst your team members. Second, you can’t force developers to create commits that look a certain way—you can only encourage them to do so.
+<font color="green">This has an important impact when configuring hooks for a team of developers. First, you need to find a way to make sure hooks stay up-to-date amongst your team members. Second, you can’t force developers to create commits that look a certain way—you can only encourage them to do so.</font>
 
-Maintaining hooks for a team of developers can be a little tricky because the `.git/hooks` directory isn’t cloned with the rest of your project, nor is it under version control. A simple solution to both of these problems is to store your hooks in the actual project directory (above the `.git` directory). This lets you edit them like any other version-controlled file. To install the hook, you can either create a symlink to it in `.git/hooks`, or you can simply copy and paste it into the `.git/hooks` directory whenever the hook is updated.
+<font color="green">Maintaining hooks for a team of developers can be a little tricky because the `.git/hooks` directory isn’t cloned with the rest of your project, nor is it under version control. A simple solution to both of these problems is to store your hooks in the actual project directory (above the `.git` directory). This lets you edit them like any other version-controlled file. To install the hook, you can either create a symlink to it in `.git/hooks`, or you can simply copy and paste it into the `.git/hooks` directory whenever the hook is updated.</font>
 
 
 
-As an alternative, Git also provides a [Template Directory](http://git-scm.com/docs/git-init#_template_directory)mechanism that makes it easier to install hooks automatically. All of the files and directories contained in this template directory are copied into the `.git` directory every time you use `git init` or `git clone`.
+<font color="red">As an alternative, Git also provides a [Template Directory](http://git-scm.com/docs/git-init#_template_directory)mechanism that makes it easier to install hooks automatically. All of the files and directories contained in this template directory are copied into the `.git` directory every time you use `git init` or `git clone`.</font>
 
 All of the [local hooks](https://www.atlassian.com/git/tutorials/git-hooks/local-hooks) described below can be altered—or completely un-installed—by the owner of a repository. It’s entirely up to each team member whether or not they actually use a hook. With this in mind, it’s best to think of Git hooks as a convenient developer tool rather than a strictly enforced development policy.
 
@@ -103,11 +103,11 @@ All of the `pre-` hooks let you alter the action that’s about to take place, w
 
 We’ll also see some useful techniques for parsing hook arguments and requesting information about the repository using lower-level Git commands.
 
-### Pre-Commit
+### <font color="green">Pre-Commit</font>
 
 The `pre-commit` script is executed every time you run `git commit`before Git asks the developer for a commit message or generates a commit object. You can use this hook to inspect the snapshot that is about to be committed. For example, you may want to run some automated tests that make sure the commit doesn’t break any existing functionality.
 
-No arguments are passed to the `pre-commit` script, and exiting with a non-zero status aborts the entire commit. Let’s take a look at a simplified (and more verbose) version of the built-in `pre-commit` hook. This script aborts the commit if it finds any whitespace errors, as defined by the `git diff-index` command (trailing whitespace, lines with only whitespace, and a space followed by a tab inside the initial indent of a line are considered errors by default).
+<font color="green">No arguments are passed to the `pre-commit` script, and exiting with a non-zero status aborts the entire commit</font>. Let’s take a look at a simplified (and more verbose) version of the built-in `pre-commit` hook. This script aborts the commit if it finds any whitespace errors, as defined by the `git diff-index` command (trailing whitespace, lines with only whitespace, and a space followed by a tab inside the initial indent of a line are considered errors by default).
 
 ```
 #!/bin/sh
@@ -144,7 +144,7 @@ This is just one example of the `pre-commit` hook. It happens to use existing Gi
 
 The `prepare-commit-msg` hook is called after the `pre-commit`hook to populate the text editor with a commit message. This is a good place to alter the automatically generated commit messages for squashed or merged commits.
 
-One to three arguments are passed to the `prepare-commit-msg`script:
+<font color="green">One to three arguments are passed to the `prepare-commit-msg`script:</font>
 
 1. The name of a temporary file that contains the message. You change the commit message by altering this file in-place.
 2. The type of commit. This can be `message` (`-m` or `-F` option), `template` (`-t` option), `merge` (if the commit is a merge commit), or `squash` (if the commit is squashing other commits).
@@ -152,9 +152,11 @@ One to three arguments are passed to the `prepare-commit-msg`script:
 
 As with `pre-commit`, exiting with a non-zero status aborts the commit.
 
-We already saw a simple example that edited the commit message, but let’s take a look at a more useful script. When using an issue tracker, a common convention is to address each issue in a separate branch. If you include the issue number in the branch name, you can write a `prepare-commit-msg` hook to automatically include it in each commit message on that branch.
+We already saw a simple example t
 
-```
+ issue in a separate branch. If you include the issue number in the branch name, you can write a `prepare-commit-msg` hook to automatically include it in each commit message on that branch.
+
+```python
 #!/usr/bin/env python
 
 import sys, os, re
@@ -207,13 +209,13 @@ However, without the `-m` option, the `prepare-commit-msg` hook does allow the u
 
 ### Commit Message
 
-The `commit-msg` hook is much like the `prepare-commit-msg` hook, but it’s called *after* the user enters a commit message. This is an appropriate place to warn developers that their message doesn’t adhere to your team’s standards.
+<font color="green">The `commit-msg` hook is much like the `prepare-commit-msg` hook, but it’s called *after* the user enters a commit message. This is an appropriate place to warn developers that their message doesn’t adhere to your team’s standards.</font>
 
 The only argument passed to this hook is the name of the file that contains the message. If it doesn’t like the message that the user entered, it can alter this file in-place (just like with `prepare-commit-msg`) or it can abort the commit entirely by exiting with a non-zero status.
 
 For example, the following script checks to make sure that the user didn’t delete the `ISSUE-[#]` string that was automatically generated by the `prepare-commit-msg` hook in the previous section.
 
-```
+```python
 #!/usr/bin/env python
 
 import sys, os, re
@@ -244,13 +246,13 @@ While this script is called every time the user creates a commit, you should avo
 
 ### Post-Commit
 
-The `post-commit` hook is called immediately after the `commit-msg`hook. It can’t change the outcome of the `git commit` operation, so it’s used primarily for notification purposes.
+<font color="green">The `post-commit` hook is called immediately after the `commit-msg`hook. It can’t change the outcome of the `git commit` operation, so it’s used primarily for notification purposes.</font>
 
 The script takes no parameters and its exit status does not affect the commit in any way. For most `post-commit` scripts, you’ll want access to the commit that was just created. You can use `git rev-parse HEAD` to get the new commit’s SHA1 hash, or you can use `git log -1 HEAD` to get all of its information.
 
 For example, if you want to email your boss every time you commit a snapshot (probably not the best idea for most workflows), you could add the following `post-commit` hook.
 
-```
+```python
 #!/usr/bin/env python
 
 import smtplib
@@ -347,7 +349,9 @@ The pre-rebase hook refused to rebase.
 
 For a more in-depth example, take a look at the included `pre-rebase.sample` script. This script is a little more intelligent about when to disallow rebasing. It checks to see if the topic branch that you’re trying to rebase has already been merged into the `next` branch (which is assumed to be the mainline branch). If it has, you’re probably going to get into trouble by rebasing it, so the script aborts the rebase.
 
-## Server-side Hooks
+
+
+## <font color="red">Server-side Hooks</font>
 
 Server-side hooks work just like local ones, except they reside in server-side repositories (e.g., a central repository, or a developer’s public repository). When attached to the official repository, some of these can serve as a way to enforce policy by rejecting certain commits.
 
@@ -443,4 +447,3 @@ In this article, we learned how Git hooks can be used to alter internal behavior
 We also looked at some of the most common local and server-side hooks. These let us plug in to the entire development life cycle. We now know how to perform customizable actions at every stage in the commit creation process, as well as the `git push` process. With a little bit of scripting knowledge, this lets you do virtually anything you can imagine with a Git repository.
 
 
-  
