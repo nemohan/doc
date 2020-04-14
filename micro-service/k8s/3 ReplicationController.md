@@ -92,6 +92,36 @@ ReplicaSet 是新版本的ReplicationController。和rc相比，rs有更强的la
 
 
 
+##### matchExpressions
+
+![1585374728342](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585374728342.png)
+
+每个matchExpression 必须包含key、operator和values
+
+支持的操作符:
+
+* in label的值匹配其中某个指定的值
+* notIn label的值不匹配指定的任意值
+* Exists Pod必须包含特定key的label。这时可以不指定values。
+* DoesNotExist Pod 必须不包label,不提供values
+
+
+
+
+
+### DaemonSet
+
+ds 确保每个集群node只运行一个pod实例，也可以通过label selector, 使pod运行在集群的某些node上。当某个运行pod的node失效后，在该node上运行且被ds管理的pod不会迁移到其他node上。当有新的node 加入集群，ds可以自动在新node上部署pod
+
+若删除node的用于匹配ds的label, pod也会随之结束运行
+
+删除ds会删除所有的pod
+
+下图展示的是ds管理的pod只运行在有标签disk-ssd的node上
+
+![1585376817430](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585376817430.png)
+
+### Job
 
 ### 常用命令
 
@@ -100,6 +130,10 @@ kubectl scale rc kubia --replicas=10				# 更改pod副本数量
 kubectl delete rc kubia --cascade					# 删除ReplicationController，但不删除被管理的pods
 kubectl get rc 										# rc列表
 kubectl create -f kubia-rc.yaml						#根据rc描述文件，创建rc
+kubectl delete rs <rs-name> 						# 删除replicaSet
+
+kubectl get dc										#dc列表
+kubectl get job										# job列表
 
 ~~~
 
