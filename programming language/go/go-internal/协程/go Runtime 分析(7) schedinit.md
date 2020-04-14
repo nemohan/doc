@@ -2,7 +2,11 @@
 
 
 
-##### schedinit (runtime/proc.go)
+[TOC]
+
+
+
+### schedinit (runtime/proc.go)
 
 
 
@@ -50,6 +54,7 @@ func schedinit() {
 	if n, ok := atoi32(gogetenv("GOMAXPROCS")); ok && n > 0 {
 		procs = n
 	}
+    //go1.8.3 _MaxGomaxprocs 是256
 	if procs > _MaxGomaxprocs {
 		procs = _MaxGomaxprocs
 	}
@@ -67,7 +72,7 @@ func schedinit() {
 
 
 
-schedinit 对应的汇编代码
+##### 反汇编schedinit
 
 ~~~assembly
 
@@ -235,6 +240,16 @@ func schedinit() {
 
 
 
+
+
+
+
+
+
+### procresize
+
+
+
 ~~~go
 
 //=================================== procresize
@@ -350,6 +365,7 @@ func procresize(nprocs int32) *p {
 		// continue to use the current P
 		_g_.m.p.ptr().status = _Prunning
 	} else {
+        //启动阶段
 		// release the current P and acquire allp[0]
 		if _g_.m.p != 0 {
 			_g_.m.p.ptr().m = 0

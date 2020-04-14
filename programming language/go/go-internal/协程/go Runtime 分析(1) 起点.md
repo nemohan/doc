@@ -2,6 +2,10 @@
 
 
 
+[TOC]
+
+
+
 使用的命令：
 objdump -dS main_goroutine > main_objdump
 
@@ -9,7 +13,7 @@ GOARCH=386 go build -gcflags "-E" -o main_goroutine main.go
 
 objdump -DgSlF main_goroutine > main_goroutine_objdump
 
-OARCH=386 go build -gccgoflags "-gstabs" -o main_goroutine main.go
+GOARCH=386 go build -gcflags "-gstabs" -o main_goroutine main.go
 
 ###  为什么要分析go runtime
 
@@ -98,7 +102,7 @@ void start(int argc, char* argv[]){
 
 main函数的定义，main函数只有一条语句即调用下面的rutime.rt0_go
 
-~~~
+~~~asm
 //main 函数定义在rt0_linux_386.s
 TEXT main(SB),NOSPLIT,$0
 	JMP	runtime·rt0_go(SB)
@@ -208,7 +212,7 @@ type g struct {
 
 
 
-#### runtim.rt0_go 
+### runtim.rt0_go 
 
 此函数定义在runtime/asm_386.s 是一个比较大的函数，将其分成几部分来分析
 
@@ -219,7 +223,7 @@ rt0_go 的任务:
 
 
 
-##### part 1
+#### part 1
 
 下面这段代码主要初始化g0，设置g0使用的大约64KB的栈空间
 
@@ -243,10 +247,10 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
  8085f74:	8b 5c 24 08          	mov    0x8(%esp),%ebx   //ebx = argv
 /usr/local/lib/go/src/runtime/asm_386.s:14
 	SUBL	$128, SP		// plenty of scratch
- 8085f78:	81 ec 80 00 00 00    	sub    $0x80,%esp
+ 8085f78:	81 ec 80 00 00 00    	sub    $0x80,%esp		//预留空间
 /usr/local/lib/go/src/runtime/asm_386.s:15
 	ANDL	$~15, SP
- 8085f7e:	83 e4 f0             	and    $0xfffffff0,%esp
+ 8085f7e:	83 e4 f0             	and    $0xfffffff0,%esp // 对齐？？
 /usr/local/lib/go/src/runtime/asm_386.s:16
 	MOVL	AX, 120(SP)		// save argc, argv away
  8085f81:	89 44 24 78          	mov    %eax,0x78(%esp)	//保存argc, 到局部变量
@@ -281,13 +285,13 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
  8085f95:	89 5d 08             	mov    %ebx,0x8(%ebp)   //g0.stackguard0 = end
 /usr/local/lib/go/src/runtime/asm_386.s:24
 	MOVL	BX, g_stackguard1(BP)
- 8085f98:	89 5d 0c             	mov    %ebx,0xc(%ebp)
+ 8085f98:	89 5d 0c             	mov    %ebx,0xc(%ebp)  //g0.stackguard1 = end
 /usr/local/lib/go/src/runtime/asm_386.s:25
 	MOVL	BX, (g_stack+stack_lo)(BP)
- 8085f9b:	89 5d 00             	mov    %ebx,0x0(%ebp)
+ 8085f9b:	89 5d 00             	mov    %ebx,0x0(%ebp)  //g0.stack.lo = end
 /usr/local/lib/go/src/runtime/asm_386.s:26
 	MOVL	SP, (g_stack+stack_hi)(BP)
- 8085f9e:	89 65 04             	mov    %esp,0x4(%ebp)
+ 8085f9e:	89 65 04             	mov    %esp,0x4(%ebp)  //g0.stack.hi = esp
 
 
 
@@ -295,18 +299,18 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 
 
 
-##### part 2
+####　part 2
 
 通过检查能否设置EFLAGS 寄存器的第21位确定CPU是否支持CPUID指令。
 
-步骤: 获取EFLAGS的当前值，并保存在局部变量中old。通过异或0x200000设置EFLAGS的第21位。设置后将新的值保存到EFLAGS寄存器，然后再次获取EFLAGS寄存器的值 new_eflags。然后将old和new_eflags进行异或运算（若能设置第21位那么此时将得到0x200000)，将得到的运算结果和0x200000进行"与"操作。若结果不为0则说明可以设置EFLAGS寄存器。
+步骤: 获取EFLAGS的当前值，并保存在局部变量old中。通过异或0x200000设置EFLAGS的第21位。设置后将新的值保存到EFLAGS寄存器，然后再次获取EFLAGS寄存器的值 new_eflags。然后将old和new_eflags进行异或运算（若能设置第21位那么此时将得到0x200000)，将得到的运算结果和0x200000进行"与"操作。若结果不为0则说明可以设置EFLAGS寄存器。
 
 此部分完成的任务:
 
 * 检查能否设置EFLAGS寄存器的第21位
 * 能设置跳转到part2.2。不能设置则退出
 
-part 2.1 
+##### part 2.1 
 
 ~~~asm
 /***********************************
@@ -335,16 +339,16 @@ xorl $0x200000, (%esp)指令会设置或清除第21位
  8085faa:	9d                   	popf   
 /usr/local/lib/go/src/runtime/asm_386.s:37
 	PUSHFL
- 8085fab:	9c                   	pushf  
+ 8085fab:	9c                   	pushf  //设置后的新值
 /usr/local/lib/go/src/runtime/asm_386.s:38
 	POPL	AX
- 8085fac:	58                   	pop    %eax
+ 8085fac:	58                   	pop    %eax //新值
 /usr/local/lib/go/src/runtime/asm_386.s:39
 	XORL	0(SP), AX
- 8085fad:	33 04 24             	xor    (%esp),%eax
+ 8085fad:	33 04 24             	xor    (%esp),%eax //新旧异或
 /usr/local/lib/go/src/runtime/asm_386.s:40
 	POPFL	// restore EFLAGS
- 8085fb0:	9d                   	popf   
+ 8085fb0:	9d                   	popf   //恢复原来的值
  
 /usr/local/lib/go/src/runtime/asm_386.s:41
 	TESTL	$(1<<21), AX
@@ -387,7 +391,7 @@ bad_proc: // show that the program requires MMX.
 
 
 
-part 2.2
+##### part 2.2
 
 ~~~asm
 
@@ -395,7 +399,7 @@ part 2.2
 
 /****************************************
 支持CPUID指令
-1 检查CPUID支持的最大参数,EAX为0调用CPUID时在EAX中的返回值即是
+1 检查CPUID支持的最大参数,EAX为0调用CPUID时在EAX中的返回值即是支持的最大参数
 2
 *******************************************/
 has_cpuid:
@@ -412,8 +416,10 @@ has_cpuid:
  8085fe8:	83 f8 00             	cmp    $0x0,%eax
 /usr/local/lib/go/src/runtime/asm_386.s:59
 	JE	nocpuinfo
- 8085feb:	74 50                	je     808603d <runtime.rt0_go+0xcd>
+ 8085feb:	74 50                	je     808603d <runtime.rt0_go+0xcd> //跳转到part2.3
 /usr/local/lib/go/src/runtime/asm_386.s:64
+
+
 
 	// Figure out how to serialize RDTSC.
 	// On Intel processors LFENCE is enough. AMD requires MFENCE.
@@ -485,12 +491,13 @@ notintel:
 	MOVL	BX, runtime·cpuid_ebx7(SB)
  8086037:	89 1d 74 8d 0d 08    	mov    %ebx,0x80d8d74
 /usr/local/lib/go/src/runtime/asm_386.s:97
+
 nocpuinfo:	
 ~~~
 
 
 
-part 2.3
+##### part 2.3
 
 * 检查_cgo_init的值是否为0，若为0则跳转到80860c4(part2.5)的位置继续执行
 
@@ -558,7 +565,7 @@ _cgo_init 定义在runtim/cgo.go 文件中
 
 
 
-part 2.4
+##### part 2.4
 
 * ldt0setup成功后，跳转到这里
 * 设置m0.tls[0] = &g0
@@ -676,9 +683,13 @@ ok:
  80860b3:	6a 00                	push   $0x0
 /usr/local/lib/go/src/runtime/asm_386.s:163
 	CALL	runtime·newproc(SB)
- 80860b5:	e8 76 91 fe ff       	call   806f230 <runtime.newproc>
- // ########## 看第8篇
+ 80860b5:	e8 76 91 fe ff       	call   806f230 <runtime.newproc>//为何调用newproc
+ ###################
+  启动main goroutine. main goroutine 负责执行定义在main package 中的main函数
+ ###########################
  
+ 
+ // ########## 看第8篇
 /usr/local/lib/go/src/runtime/asm_386.s:164
 	POPL	AX
  80860ba:	58                   	pop    %eax
@@ -779,9 +790,9 @@ TEXT runtime·asminit(SB),NOSPLIT,$0-0
 
 
 
+### ldt0setup 
 
-
-#### ldt0setup 定义在runtime/asm_386.s中，ldt0setup的工作:
+定义在runtime/asm_386.s中，ldt0setup的工作:
 
 * 调用setldt(0x7, m0.tls,  0x20)(定义在runtime/sys_linux_386.s)设置m0.tls(m0定义在runtime/proc2.go)
 
@@ -816,7 +827,7 @@ TEXT runtime·ldt0setup(SB),NOSPLIT,$16-0
  即 0x80c9520 + 0x44 = 0x80c9564
 /usr/local/lib/go/src/runtime/asm_386.s:859
 	LEAL	runtime·m0+m_tls(SB), AX
- 808779a:	8d 05 58 95 0c 08    	lea    0x80c9558,%eax
+ 808779a:	8d 05 58 95 0c 08    	lea    0x80c9558,%eax 	#eax = m0.m_tls 
 /usr/local/lib/go/src/runtime/asm_386.s:860
 	MOVL	AX, 4(SP)
  80877a0:	89 44 24 04          	mov    %eax,0x4(%esp) 
@@ -835,9 +846,7 @@ TEXT runtime·ldt0setup(SB),NOSPLIT,$16-0
 
 
 
-
-
-#### setldt(runtime/sys_linux_386.s)
+### setldt(runtime/sys_linux_386.s)
 
 setldt的任务是调用系统调用set_thread_area设置GDT的tls入口
 

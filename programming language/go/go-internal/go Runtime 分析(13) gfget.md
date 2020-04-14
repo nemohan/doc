@@ -1,5 +1,248 @@
 # newproc1 续 gfget
 
+
+
+
+
+### p的定义
+
+~~~go
+type p struct {
+	lock mutex
+
+	id          int32
+	status      uint32 // one of pidle/prunning/...
+	link        puintptr
+	schedtick   uint32     // incremented on every scheduler call
+	syscalltick uint32     // incremented on every system call
+	sysmontick  sysmontick // last tick observed by sysmon
+	m           muintptr   // back-link to associated m (nil if idle)
+	mcache      *mcache
+	racectx     uintptr
+
+	deferpool    [5][]*_defer // pool of available defer structs of different sizes (see panic.go)
+	deferpoolbuf [5][32]*_defer
+
+	// Cache of goroutine ids, amortizes accesses to runtime·sched.goidgen.
+	goidcache    uint64
+	goidcacheend uint64
+
+	// Queue of runnable goroutines. Accessed without lock.
+	runqhead uint32
+	runqtail uint32
+	runq     [256]guintptr
+	// runnext, if non-nil, is a runnable G that was ready'd by
+	// the current G and should be run next instead of what's in
+	// runq if there's time remaining in the running G's time
+	// slice. It will inherit the time left in the current time
+	// slice. If a set of goroutines is locked in a
+	// communicate-and-wait pattern, this schedules that set as a
+	// unit and eliminates the (potentially large) scheduling
+	// latency that otherwise arises from adding the ready'd
+	// goroutines to the end of the run queue.
+	runnext guintptr
+
+	// Available G's (status == Gdead)
+	gfree    *g
+	gfreecnt int32
+
+	sudogcache []*sudog
+	sudogbuf   [128]*sudog
+
+	tracebuf traceBufPtr
+
+	// traceSweep indicates the sweep events should be traced.
+	// This is used to defer the sweep start event until a span
+	// has actually been swept.
+	traceSweep bool
+	// traceSwept and traceReclaimed track the number of bytes
+	// swept and reclaimed by sweeping in the current sweep loop.
+	traceSwept, traceReclaimed uintptr
+
+	palloc persistentAlloc // per-P to avoid mutex
+
+	// Per-P GC state
+	gcAssistTime         int64 // Nanoseconds in assistAlloc
+	gcFractionalMarkTime int64 // Nanoseconds in fractional mark worker
+	gcBgMarkWorker       guintptr
+	gcMarkWorkerMode     gcMarkWorkerMode
+
+	// gcMarkWorkerStartTime is the nanotime() at which this mark
+	// worker started.
+	gcMarkWorkerStartTime int64
+
+	// gcw is this P's GC work buffer cache. The work buffer is
+	// filled by write barriers, drained by mutator assists, and
+	// disposed on certain GC state transitions.
+	gcw gcWork
+
+	// wbBuf is this P's GC write barrier buffer.
+	//
+	// TODO: Consider caching this in the running G.
+	wbBuf wbBuf
+
+	runSafePointFn uint32 // if 1, run sched.safePointFn at next safe point
+
+	pad [sys.CacheLineSize]byte
+}
+~~~
+
+
+
+### gfget
+
+runtime/proc.go
+
+
+
+~~~go
+/ Get from gfree list.
+// If local list is empty, grab a batch from global list.
+func gfget(_p_ *p) *g {
+retry:
+	gp := _p_.gfree
+	if gp == nil && (sched.gfreeStack != nil || sched.gfreeNoStack != nil) {
+		lock(&sched.gflock)
+		for _p_.gfreecnt < 32 {
+			if sched.gfreeStack != nil {
+				// Prefer Gs with stacks.
+				gp = sched.gfreeStack
+				sched.gfreeStack = gp.schedlink.ptr()
+			} else if sched.gfreeNoStack != nil {
+				gp = sched.gfreeNoStack
+				sched.gfreeNoStack = gp.schedlink.ptr()
+			} else {
+				break
+			}
+			_p_.gfreecnt++
+			sched.ngfree--
+			gp.schedlink.set(_p_.gfree)
+			_p_.gfree = gp
+		}
+		unlock(&sched.gflock)
+		goto retry
+	}
+	if gp != nil {
+		_p_.gfree = gp.schedlink.ptr()
+		_p_.gfreecnt--
+		if gp.stack.lo == 0 {
+			// Stack was deallocated in gfput. Allocate a new one.
+			systemstack(func() {
+				gp.stack = stackalloc(_FixedStack)
+			})
+			gp.stackguard0 = gp.stack.lo + _StackGuard
+		} else {
+			if raceenabled {
+				racemalloc(unsafe.Pointer(gp.stack.lo), gp.stack.hi-gp.stack.lo)
+			}
+			if msanenabled {
+				msanmalloc(unsafe.Pointer(gp.stack.lo), gp.stack.hi-gp.stack.lo)
+			}
+		}
+	}
+	return gp
+}
+
+~~~
+
+
+
+/ Get from gfree list.
+
+// If local list is empty, grab a batch from global list.
+
+func gfget(_p_ *p) *g {
+
+retry:
+
+​    gp := _p_.gfree
+
+​    if gp == nil && (sched.gfreeStack != nil || sched.gfreeNoStack != nil) {
+
+​        lock(&sched.gflock)
+
+​        for _p_.gfreecnt < 32 {
+
+​            if sched.gfreeStack != nil {
+
+​                // Prefer Gs with stacks.
+
+​                gp = sched.gfreeStack
+
+​                sched.gfreeStack = gp.schedlink.ptr()
+
+​            } else if sched.gfreeNoStack != nil {
+
+​                gp = sched.gfreeNoStack
+
+​                sched.gfreeNoStack = gp.schedlink.ptr()
+
+​            } else {
+
+​                break
+
+​            }
+
+​            _p_.gfreecnt++
+
+​            sched.ngfree--
+
+​            gp.schedlink.set(_p_.gfree)
+
+​            _p_.gfree = gp
+
+​        }
+
+​        unlock(&sched.gflock)
+
+​        goto retry
+
+​    }
+
+​    if gp != nil {
+
+​        _p_.gfree = gp.schedlink.ptr()
+
+​        _p_.gfreecnt--
+
+​        if gp.stack.lo == 0 {
+
+​            // Stack was deallocated in gfput. Allocate a new one.
+
+​            systemstack(func() {
+
+​                gp.stack = stackalloc(_FixedStack)
+
+​            })
+
+​            gp.stackguard0 = gp.stack.lo + _StackGuard
+
+​        } else {
+
+​            if raceenabled {
+
+​                racemalloc(unsafe.Pointer(gp.stack.lo), gp.stack.hi-gp.stack.lo)
+
+​            }
+
+​            if msanenabled {
+
+​                msanmalloc(unsafe.Pointer(gp.stack.lo), gp.stack.hi-gp.stack.lo)
+
+​            }
+
+​        }
+
+​    }
+
+​    return gp
+
+}
+
+
+
+
+
 ~~~assembly
 
 0806fa00 <runtime.gfget>:

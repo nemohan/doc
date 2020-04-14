@@ -1,5 +1,17 @@
 # go runtime 的一些疑问
 
+
+
+[TOC]
+
+
+
+### 总结
+
+##### 启动阶段
+
+runtime.rt0_go 调用相关的初始化函数，来设置runtime。其中runtime.sched_init 会准备好m的运行队列。创建主协程运行main.main函数
+
 ### syscall的行为
 
  进入系统调用时，p的状态改变为_Psyscall。 sysmon会将处于 _Psyscall状态的p 安排到其他的m进行调度。有可能会增加线程M的数量
