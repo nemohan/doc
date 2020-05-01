@@ -139,9 +139,43 @@ kubectl create configmap fortune-config --from-file=configmap-files
 
 
 
+创建https用的证书:
+
+~~~
+kubectl create secret generic fortune-https --from-file=https.key
+ --from-file=https.cert --from-file=foo
+~~~
+
+
+
+##### 以环境变量方式使用secret
+
+![1586917832821](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586917832821.png)
+
+##### 以数据卷形式使用secret
+
+![1586917705559](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586917705559.png)
+
+
+
+##### 创建从私有仓库获取docker镜像的secret
+
+可以使用以下命令创建从私有仓库获取docker镜像的secret
+
+~~~
+kubectl create secret docker-registry mydockerhubsecret \
+--docker-username=myusername --docker-password=mypassword \
+--docker-email=my.email@provider.com
+~~~
+
+创建secret以后，需要在pod资源描述文件中引用新创建的secret。这种方式需要为每个需要从私有镜像仓库获取镜像的Pod指定secret。可以通过将secret添加到serviceAccount的来避免修改每个pod
+
+![1586918329230](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586918329230.png)
+
 ### 常用命令
 
 ~~~
-
+kubectl create secret tls						#创建tls
+kubectl create configmap fortune-config --from-file=configmap-files #创建configmap
 ~~~
 

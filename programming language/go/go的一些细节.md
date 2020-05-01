@@ -523,6 +523,9 @@ func main(){
 
 #### method value and expression
 
+* method value  有点类似函数值，只是method value 是绑定了类型实例的方法。假设t是类型T的一个实例，t.method 就是一个method value
+* method expression , method expression 未绑定类型实例，假设有类型T.method或(*T).method就是method expression。T和"星T"的区别就是method的接收者是对象还是指向对象的指针
+
 ~~~
 package main
 type Point struct{
@@ -548,7 +551,7 @@ func main(){
 * 带指针结构体的拷贝
 * 带slice 或map的结构体的拷贝
 
-~~~
+~~~go
 type A struct{
   member int
 }
@@ -578,6 +581,25 @@ c.A.method() //才能调用A的method方法
 * 带map的结构体的拷贝
 
 ### interface
+
+* 一种常见的确保某个具体类型满足某个接口的范式是:  var _ io.Writer = *bytes.Buffer(nil)
+
+* 类型断言 (type assertion)
+* type switch
+* 若method的receiver(接收者)是指针*T类型，而接口变量i的值是类型为T值类型。那么用i.method将出现编译错误
+* interface value可用于比较操作符== 和!=。两个接口值相等仅当二者都是nil或者其动态类型一样并且值相等(根据其动态类型的==操作符)。若其动态类型不可比较可能导致panic
+
+
+
+interface value 的比较:
+
+~~~go
+var x interface{} = []int{1, 2, 3}
+fmt.Println(x==x) //panic
+~~~
+
+
+
 可以理解interface 的值包含两部分:type, value
 ~~~
 type writer interface{
@@ -601,14 +623,53 @@ func main(){
 }
 ~~~
 
+![1587170646772](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587170646772.png)
+
+
+
 ### channel
+
 * 写已经关闭的channel 会导致panic
 * 关闭已经关闭的channel也会导致panic
-* 读已经关闭的channel会返回channel的基本类型对应的零值
+* 读已经关闭的channel会返回channel的基本类型对应的零值,
+* 使用range遍历channel
+* 读取channel时检查是否关闭
+* 不必关闭所有不再使用的channel,因为gc会回收不再使用的channel
+* 单向channel声明
 * channel 可以转为only-read channel或only-write channel. 但不能反向进行
 * go-routine 泄漏，channel的接收端提早退出。可能导致发送端的go-routine一直等待
 * channel 实现令牌机制
+* 读写值为nil的channel都会导致阻塞
+
+
+
+#### unbuffered channel
+
+创建channel时未指定channel容量或指定的容量为0
+
+~~~go
+ch := make(chan int)
 ~~~
+
+
+
+#### buffered channel
+
+
+
+##### 读取channel时，检查channel是否关闭
+
+~~~
+if v, ok := <-ch; !ok{
+    //ch 已经关闭
+}
+~~~
+
+
+
+##### 使用range 遍历channel,channel 关闭后会退出循环
+
+~~~go
 package main
 
 import (
@@ -634,7 +695,7 @@ func main() {
 }
 ~~~
 
-~~~
+~~~go
 package main
 
 import "fmt"
@@ -659,5 +720,159 @@ func main() {
 
 ### Reflection 反射
 
-
 ### Package
+
+
+
+### Test
+
+* 用go build 编译代码时，同一个package下面的以_test.go 结尾的文件不会被编译
+
+* 在*_test.go中有三类特殊函数, 分别是test function、benchmark function和example function
+* 测试文件必须导入testing 包
+* 使用go test命令时，若未提供包名，则默认编译当前路径下的测试文件
+
+##### *_test.go 中的三类特殊函数
+
+* 测试用例函数，函数名以Test开头。若有后缀，则后缀必须以大写字母开头，如TestName
+* benchmark function, 函数名以Benchmark开头,用来度量某些操作的性能
+* 示例函数(example function), 函数名以Example开头
+
+以下是三类函数的实例:
+
+~~~
+func TestName(t *testing.T){
+    
+}
+~~~
+
+##### go test 命令
+
+使用-v 参数可以输出用例函数的名称及运行时间。如下
+
+![1587950896824](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587950896824.png)
+
+
+
+-run 参数， 其参数值是正则表达式. 指示go test只运行匹配的用例函数
+
+
+
+##### 语句执行的覆盖率
+
+以下命令收集被测代码的执行覆盖率数据到c.out文件
+
+~~~
+go test -coverprofile=c.out 
+~~~
+
+
+
+以下命令将覆盖率数据c.out转为html:
+
+~~~
+go tool cover -html=c.out
+~~~
+
+语句执行频度:
+
+~~~
+go test -coverprofile=c.out -covermode=count
+~~~
+
+
+
+
+
+##### 外部测试包和内部函数导出
+
+* 外部测试包(external test package)。意指在同一个包内，测试文件被放到以"包名_test"命名的包中，即测试文件和被测文件在同一目录内，但测试文件的包声明是"包名_test"
+
+* 内部函数导出。~~有时候需要将测试文件放到一个独立的包中~~，若这时候需要访问被测试包的内部函数(非导出函数)，可以提供一个内部函数导出文件。假设需要访问被测试包p.add函数，可在包p内提供一个export_test.go文件
+
+export_test.go 文件内容如下
+
+~~~
+package p
+
+var Add = add
+~~~
+
+
+
+##### benchmark 函数
+
+benchmark 函数用来度量程序的性能，在测试文件中以Benchmark函数开头的函数，接受一个参数*testiing.B。如以下代码所示，调用IsPalindrome b.N次
+
+~~~GO
+import "testing"
+func BenchmarkIsPalindrome(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+	IsPalindrome("A man, a plan, a canal: Panama")
+	}
+}
+~~~
+
+在默认情况下，使用go test 不会运行测试文件中的benchmark函数。可以指定-bench 标志来选择执行哪些benchmark函数，-bench的值是正则表达式。若-bench的值是"."则运行测试文件中所有的benchmark函数
+
+![1588144332242](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1588144332242.png)
+
+
+
+可以在benchmark过程中，指定-benchmem标志查看内存分配情况
+
+![1588145485788](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1588145485788.png)
+
+##### profile
+
+* cpu profile  go test -cpuprofile=cpu.out
+* heap profile go test -memprofile=block.out
+* blocking profile go test -blockprofile=block.out
+
+生成的profile文件可以使用go tool pprof 进行分析
+
+##### exmaple 函数
+
+测试文件中以Example开头的函数是示例函数,如以下代码所示
+
+~~~go
+func ExampleIsPalindrome() {
+fmt.Println(IsPalindrome("A man, a plan, a canal: Panama"))
+fmt.Println(IsPalindrome("palindrome"))
+// Output:
+// true
+// false
+}
+~~~
+
+
+
+### 一些容易忽略的问题
+
+#### for 中变量的使用
+
+~~~go
+package main
+
+import (
+        "fmt"
+)
+type A struct{
+        a int
+}
+
+func main(){
+        table := make(map[int]*A, 0)
+        s := []A{A{a:1},
+                A{a:2},
+        }
+
+        for _, t := range s{
+        
+                table[t.a] = &t
+        }
+        fmt.Printf("%#v %#v\n", table[1], table[2])
+}
+
+~~~
+

@@ -1,6 +1,17 @@
 # 未知的sysmon
 
+runtime.main 会调用sysmon,
 
+
+
+### sysmon
+
+sysmon 应该是runtime的监视协程,
+
+* 睡眠
+* 调用netpoll 检查等待网络io的协程是否就绪
+* 调用retake 检查处于系统调用状态的p
+* 检查gc
 
 ~~~go
 // Always runs without a P, so write barriers are not allowed.
@@ -33,6 +44,8 @@ func sysmon() {
 			delay = 10 * 1000
 		}
 		usleep(delay)
+        
+        //假设未开启调试,可以暂时忽略下面这段
 		if debug.schedtrace <= 0 && (sched.gcwaiting != 0 || atomic.Load(&sched.npidle) == uint32(gomaxprocs)) {
 			lock(&sched.lock)
 			if atomic.Load(&sched.gcwaiting) != 0 || atomic.Load(&sched.npidle) == uint32(gomaxprocs) {
@@ -53,6 +66,8 @@ func sysmon() {
 			}
 			unlock(&sched.lock)
 		}
+        
+        //检查网络io
 		// poll network if not polled for more than 10ms
 		lastpoll := int64(atomic.Load64(&sched.lastpoll))
 		now := nanotime()
@@ -101,5 +116,88 @@ func sysmon() {
 		}
 	}
 }
+~~~
+
+
+
+### retake
+
+检查所有的p
+
+~~~go
+func retake(now int64) uint32 {
+	n := 0
+	for i := int32(0); i < gomaxprocs; i++ {
+		_p_ := allp[i]
+		if _p_ == nil {
+			continue
+		}
+        
+        //处于系统调用状态的p
+		pd := &pdesc[i]
+		s := _p_.status
+		if s == _Psyscall {
+			// Retake P from syscall if it's there for more than 1 sysmon tick (at least 20us).
+            
+            //pdesc ???
+			t := int64(_p_.syscalltick)
+			if int64(pd.syscalltick) != t {
+				pd.syscalltick = uint32(t)
+				pd.syscallwhen = now
+				continue
+			}
+			// On the one hand we don't want to retake Ps if there is no other work to do,
+			// but on the other hand we want to retake them eventually
+			// because they can prevent the sysmon thread from deep sleep.
+			if runqempty(_p_) && atomic.Load(&sched.nmspinning)+atomic.Load(&sched.npidle) > 0 && pd.syscallwhen+10*1000*1000 > now {
+				continue
+			}
+			// Need to decrement number of idle locked M's
+			// (pretending that one more is running) before the CAS.
+			// Otherwise the M from which we retake can exit the syscall,
+			// increment nmidle and report deadlock.
+			incidlelocked(-1)
+			if atomic.Cas(&_p_.status, s, _Pidle) {
+				if trace.enabled {
+					traceGoSysBlock(_p_)
+					traceProcStop(_p_)
+				}
+				n++
+				_p_.syscalltick++
+				handoffp(_p_)
+			}
+			incidlelocked(1)
+		} else if s == _Prunning {
+			// Preempt G if it's running for too long.
+			t := int64(_p_.schedtick)
+			if int64(pd.schedtick) != t {
+				pd.schedtick = uint32(t)
+				pd.schedwhen = now
+				continue
+			}
+			if pd.schedwhen+forcePreemptNS > now {
+				continue
+			}
+			preemptone(_p_)
+		}
+	}
+	return uint32(n)
+}
+~~~
+
+
+
+### incidlelocked
+
+~~~go
+func incidlelocked(v int32) {
+	lock(&sched.lock)
+	sched.nmidlelocked += v
+	if v > 0 {
+		checkdead()
+	}
+	unlock(&sched.lock)
+}
+
 ~~~
 

@@ -45,7 +45,7 @@ A passphrase will add an additional layer of security to the SSH and will be req
 
 At this point, a new SSH key will have been generated at the previously specified file path.
 
-\4. Add the new SSH key to the ssh-agent
+<font color="green">\4. Add the new SSH key to the ssh-agent</font>
 
 The ssh-agent is another program that is part of the SSH toolsuite. The ssh-agent is responsible for holding private keys. Think of it like a keychain. In addition to holding private keys it also brokers requests to sign SSH requests with the private keys so that private keys are never passed around unsecurly.
 
@@ -57,6 +57,8 @@ $ eval "$(ssh-agent -s)"
 ```
 
 Once the ssh-agent is running the following command will add the new SSH key to the local SSH agent.
+
+k是小写
 
 ```
 ssh-add -K /Users/you/.ssh/id_rsa
