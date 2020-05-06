@@ -6,22 +6,19 @@ The `git reset`, `git checkout`, and `git revert` commands are some of the most 
 
 Because they’re so similar, it’s very easy to mix up which command should be used in any given development scenario. In this article, we’ll compare the most common configurations of `git reset`, `git checkout`, and `git revert`. Hopefully, you’ll walk away with the confidence to navigate your repository using any of these commands.
 
-![1585269460024](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585269460024.png)
-
+![1585269460024](./${img}\1585269460024.png)
 <font color="green">It helps to think about each command in terms of their effect on the three state management mechanisms of a Git repository: the working directory, the staged snapshot, and the commit history. These components are sometimes known as "The three trees" of Git. We explore the three trees in depth on the `git reset` page. Keep these mechanisms in mind as you read through this article.</font>
 
 A checkout is an operation that moves the `HEAD` ref pointer to a specified commit. To demonstrate this consider the following example.
 
 
 
-![1585269573079](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585269573079.png)
-
+![1585269573079](./${img}\1585269573079.png)
 
 
 This example demonstrates a sequence of commits on the `master`branch. The `HEAD` ref and `master` branch ref currently point to commit d. Now let us execute `git checkout b`
 
-![1585269599376](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585269599376.png)
-
+![1585269599376](./${img}\1585269599376.png)
 This is an update to the "Commit History" tree. The `git checkout`command can be used in a commit, or file level scope. A file level checkout will change the file's contents to those of the specific commit.
 
 A revert is an operation that takes a specified commit and creates a new commit which inverses the specified commit. `git revert`can only be run at a commit level scope and has no file level functionality.
@@ -58,12 +55,10 @@ git reset HEAD~2
 
 <font color="green">The two commits that were on the end of `hotfix` are now dangling, or orphaned commits. This means they will be deleted the next time Git performs a garbage collection. In other words, you’re saying that you want to throw away these commits. This can be visualized as the following:</font>
 
-![1585269939562](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585269939562.png)
+![1585269939562](./${img}\1585269939562.png)
 
 
-
-![1585269965987](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585269965987.png)
-
+![1585269965987](./${img}\1585269965987.png)
 
 
 This usage of `git reset` is a simple way to undo changes that haven’t been shared with anyone else. It’s your go-to command when you’ve started working on a feature and find yourself thinking, “Oh crap, what am I doing? I should just start over.”
@@ -86,14 +81,12 @@ git checkout hotfix
 
 Internally, all the above command does is move `HEAD` to a different branch and update the working directory to match. Since this has the potential to overwrite local changes, Git forces you to commit or [stash](https://www.atlassian.com/git/tutorials/saving-changes/git-stash) any changes in the working directory that will be lost during the checkout operation. Unlike `git reset`, `git checkout` doesn’t move any branches around.
 
-![1585270493193](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585270493193.png)
+![1585270493193](./${img}\1585270493193.png)
 
 
 
 
-
-![1585270532514](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585270532514.png)
-
+![1585270532514](./${img}\1585270532514.png)
 
 
 You can also check out arbitrary commits by passing the commit reference instead of a branch. This does the exact same thing as checking out a branch: it moves the `HEAD` reference to the specified commit. For example, the following command will check out the grandparent of the current commit:
@@ -102,8 +95,7 @@ You can also check out arbitrary commits by passing the commit reference instead
 git checkout HEAD~2
 ```
 
-![1585270749575](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585270749575.png)
-
+![1585270749575](./${img}\1585270749575.png)
 <font color="green">This is useful for quickly inspecting an old version of your project. However, since there is no branch reference to the current `HEAD`, this puts you in a detached `HEAD` state. This can be dangerous if you start adding new commits because there will be no way to get back to them after you switch to another branch. For this reason, you should always create a new branch before adding commits to a detached `HEAD`.</font>
 
 ### Undo Public Commits with Revert
@@ -117,12 +109,10 @@ git revert HEAD~2
 
 This can be visualized as the following:
 
-![1585270797452](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585270797452.png)
+![1585270797452](./${img}\1585270797452.png)
 
 
-
-![1585270818905](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585270818905.png)
-
+![1585270818905](./${img}\1585270818905.png)
 
 
 Contrast this with `git reset`, which *does* alter the existing commit history. For this reason, `git revert` should be used to undo changes on a public branch, and `git reset` should be reserved for undoing changes on a private branch.
@@ -145,16 +135,14 @@ git reset HEAD~2 foo.py
 
 As with the commit-level version of `git reset`, this is more commonly used with `HEAD` rather than an arbitrary commit. Running `git reset HEAD foo.py` will unstage `foo.py`. The changes it contains will still be present in the working directory.
 
-![1585271004249](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585271004249.png)
-
+![1585271004249](./${img}\1585271004249.png)
 <font color="red">The `--soft`, `--mixed`, and `--hard` flags do not have any effect on the file-level version of `git reset`, as the staged snapshot is *always* updated, and the working directory is *never* updated.</font>
 
 ### Git Checkout File
 
 Checking out a file is similar to using `git reset` with a file path, except it updates the *working directory* instead of the stage. Unlike the commit-level version of this command, this does not move the `HEAD` reference, which means that you won’t switch branches.
 
-![1585271117567](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585271117567.png)
-
+![1585271117567](./${img}\1585271117567.png)
 For example, the following command makes `foo.py` in the working directory match the one from the 2nd-to-last commit:
 
 ```

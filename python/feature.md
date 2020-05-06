@@ -4,6 +4,27 @@
 
 
 
+#### list
+
+append 和 "+"操作符： append在原list添加元素不改变原来的list
+
+"+": 生成新的list不改变原来的list
+
+extend: 也不会改变原来的list
+
+~~~
+t = []
+t.append(1) //现在t 是[1]
+b = t
+t.append(2) //b 和t 都是[1,2]
+
+t = []
+b = t
+t = t + [1]//t 是[1], b是[]
+~~~
+
+
+
 函数式工具
 
 map、reduce、filter

@@ -1,4 +1,3 @@
-
 import os, os.path
 import codecs
 import re
@@ -58,7 +57,6 @@ def copy_img(dst_path, src_path):
         return
     
     dst_file_handler = open(dst_file, "x+b")
-    #wr = io.BufferedIOBase(dst_file_handler)
     with open(src_path, "rb") as file_handler:
         while True:
             buf = file_handler.read(4096)
@@ -67,7 +65,6 @@ def copy_img(dst_path, src_path):
             if len(buf) < 4096:
                 break
             
-
     dst_file_handler.close()
     print("copy done\n")
 
@@ -91,6 +88,7 @@ def handle_img(dirpath, filename, *arg):
     backup_file_name = pjoin(dirpath, filename +".backup")
     backup_file = codecs.open(backup_file_name, "x", encoding="utf-8")
 
+    old_file = pjoin(dirpath, filename)
     with codecs.open(pjoin(dirpath, filename), encoding="utf-8") as file_handler:
         for line in file_handler.readlines():
             m = re.match(r"^!\[([0-9]*)\]", line)
@@ -103,8 +101,9 @@ def handle_img(dirpath, filename, *arg):
                 backup_file.write(new_line)
             else:
                 backup_file.write(line)
-        backup_file.close()
-
+    backup_file.close()
+    os.remove(old_file)
+    os.rename(backup_file_name, old_file)
     
 def update_img_pos(path, old_imgs):
     walk_dir(path, handle_img, old_imgs)

@@ -12,12 +12,10 @@ Note that all of the commands presented below merge into the current branch. The
 
 Say we have a new branch feature that is based off the `master`branch. We now want to merge this feature branch into `master`.
 
-![1585182234609](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585182234609.png)
-
+![1585182234609](./${img}\1585182234609.png)
 Invoking this command will merge the specified branch feature into the current branch, we'll assume `master`. Git will determine the merge algorithm automatically (discussed below).
 
-![1585182249101](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585182249101.png)
-
+![1585182249101](./${img}\1585182249101.png)
 Merge commits are unique against other commits in the fact that they have two parent commits. When creating a merge commit Git will attempt to auto magically merge the separate histories for you. If Git encounters a piece of data that is changed in both histories it will be unable to automatically combine them. This scenario is a version control conflict and Git will need user intervention to continue. 
 
 ## Preparing to merge
@@ -42,22 +40,19 @@ Once the previously discussed "preparing to merge" steps have been taken a merge
 
 <font color="green">A fast-forward merge can occur when there is a linear path from the current branch tip to the target branch. Instead of “actually” merging the branches, all Git has to do to integrate the histories is move (i.e., “fast forward”) the current branch tip up to the target branch tip. This effectively combines the histories, since all of the commits reachable from the target branch are now available through the current one. For example, a fast forward merge of some-feature into `master` would look something like the following:</font>
 
-![1585182293778](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585182293778.png)
-
+![1585182293778](./${img}\1585182293778.png)
 <font color="green">However, a fast-forward merge is not possible if the branches have diverged. When there is not a linear path to the target branch, Git has no choice but to combine them via a 3-way merge. 3-way merges use a dedicated commit to tie together the two histories. The nomenclature comes from the fact that Git uses three commits to generate the merge commit: the two branch tips and their common ancestor.</font>
 
 
 
-![1585182318023](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585182318023.png)
+![1585182318023](./${img}\1585182318023.png)
 
 
 
 
 
 
-
-![1585182349547](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585182349547.png)
-
+![1585182349547](./${img}\1585182349547.png)
 
 
 

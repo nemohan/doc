@@ -14,8 +14,7 @@ When a piece of work is complete, tested and ready to be merged back into the ma
 
 <font color="green">A merge happens when combining two branches. Git will take two (or more) commit pointers and attempt to find a common base commit between them. Git has several different methods to find a base commit, these methods are called "merge strategies". Once Git finds a common base commit it will create a new "merge commit" that combines the changes of the specified merge commits. Technically, a merge commit is a regular commit which just happens to have two parent commits.</font>
 
-![1585183456082](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585183456082.png)
-
+![1585183456082](./${img}\1585183456082.png)
 `git merge` will automatically select a merge strategy unless explicitly specified. The `git merge` and `git pull` commands can be passed an `-s` (strategy) option. The `-s` option can be appended with the name of the desired merge strategy. If not explicitly specified, Git will select the most appropriate merge strategy based on the provided branches. The following is a list of the available merge strategies.
 
 ### Recursive 

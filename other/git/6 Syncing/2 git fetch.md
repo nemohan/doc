@@ -134,8 +134,7 @@ a1e8fb5..9e8ab1c develop -> origin/develop
 
 The commits from these new remote branches are shown as squares instead of circles in the diagram below. As you can see, `git fetch` gives you access to the entire branch structure of another repository.
 
-![1584849658577](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584849658577.png)
-
+![1584849658577](./${img}\1584849658577.png)
 To see what commits have been added to the upstream master, you can run a `git log` using origin/master as a filter:  
 
 ```

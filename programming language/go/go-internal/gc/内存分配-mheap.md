@@ -945,8 +945,7 @@ retry:
 
 
 
-![1588257560415](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1588257560415.png)
-
+![1588257560415](./${img}\1588257560415.png)
 ##### gcSweepBuf的定义
 
 ~~~go

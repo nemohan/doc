@@ -131,16 +131,14 @@ func main() {
 
 
 
-![1586001968823](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586001968823.png)
+![1586001968823](./${img}\1586001968823.png)
 
 
 
 
-
-![1586002001083](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586002001083.png)
-
+![1586002001083](./${img}\1586002001083.png)
 
 
 
 
-![1586002041004](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586002041004.png)
+![1586002041004](./${img}\1586002041004.png)

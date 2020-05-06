@@ -23,8 +23,7 @@ k8s支持三种存活检查机制:
 
 下图是使用http get 请求存活机制的实例：
 
-![1585291425638](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585291425638.png)
-
+![1585291425638](./${img}\1585291425638.png)
 
 
 存活检查机制的参数:
@@ -51,28 +50,24 @@ k8s本身可以保证pod的健康存活，如果有崩溃的pod，k8s会自动�
 
 ##### rc的工作流程
 
-![1585292561922](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585292561922.png)
-
+![1585292561922](./${img}\1585292561922.png)
 ##### rc的三个关键组成部分
 
 * label selector--决定哪些pod在rc的管辖范围内
 * pod模板--创建pod副本时使用
 * 期望的pod副本数量
 
-![1585292684928](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585292684928.png)
-
+![1585292684928](./${img}\1585292684928.png)
 
 
 
 
 rc描述文件:
 
-![1585293124792](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585293124792.png)
+![1585293124792](./${img}\1585293124792.png)
 
 
-
-![1585293194173](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585293194173.png)
-
+![1585293194173](./${img}\1585293194173.png)
 
 
 ##### rc 的优势
@@ -98,8 +93,7 @@ ReplicaSet 是新版本的ReplicationController。和rc相比，rs有更强的la
 
 ##### matchExpressions
 
-![1585374728342](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585374728342.png)
-
+![1585374728342](./${img}\1585374728342.png)
 每个matchExpression 必须包含key、operator和values
 
 支持的操作符:
@@ -123,8 +117,7 @@ ds 确保每个集群node只运行一个pod实例，也可以通过label selecto
 
 下图展示的是ds管理的pod只运行在有标签disk-ssd的node上
 
-![1585376817430](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585376817430.png)
-
+![1585376817430](./${img}\1585376817430.png)
 ### Job
 
 ### 常用命令

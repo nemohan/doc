@@ -269,8 +269,7 @@ The first thing to understand about `git rebase` is that it solves the same prob
 
 Consider what happens when you start working on a new feature in a dedicated branch, then another team member updates the `master` branch with new commits. This results in a forked history, which should be familiar to anyone who has used Git as a collaboration tool.
 
-![1584934394863](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584934394863.png)
-
+![1584934394863](./${img}\1584934394863.png)
 Now, let’s say that the new commits in `master` are relevant to the feature that you’re working on. To incorporate the new commits into your `feature` branch, you have two options: merging or rebasing.
 
 ### The Merge Option
@@ -290,8 +289,7 @@ git merge feature master
 
 This creates a new “merge commit” in the `feature` branch that ties together the histories of both branches, giving you a branch structure that looks like this:
 
-![1585013113338](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585013113338.png)
-
+![1585013113338](./${img}\1585013113338.png)
 Merging is nice because it’s a *non-destructive* operation. The existing branches are not changed in any way. This avoids all of the potential pitfalls of rebasing (discussed below).
 
 On the other hand, this also means that the `feature` branch will have an extraneous merge commit every time you need to incorporate upstream changes. If `master` is very active, this can pollute your feature branch’s history quite a bit. While it’s possible to mitigate this issue with advanced `git log` options, it can make it hard for other developers to understand the history of the project.
@@ -308,8 +306,7 @@ git rebase master 		#意思是将当前分支建立在master分支上
 
 This moves the entire `feature` branch to begin on the tip of the `master` branch, effectively incorporating all of the new commits in`master`. But, instead of using a merge commit, rebasing *re-writes *the project history by creating brand new commits for each commit in the original branch.
 
-![1585010350589](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585010350589.png)
-
+![1585010350589](./${img}\1585010350589.png)
 The major benefit of rebasing is that you get a much cleaner project history. First, it eliminates the unnecessary merge commits required by `git merge`. Second, as you can see in the above diagram, rebasing also results in a perfectly linear project history—you can follow the tip of `feature` all the way to the beginning of the project without any forks. This makes it easier to navigate your project with commands like `git log`, `git bisect`, and `gitk`.
 
 But, there are two trade-offs for this pristine commit history: safety and traceability. If you don’t follow the [Golden Rule of Rebasing](https://www.atlassian.com/git/tutorials/merging-vs-rebasing#the-golden-rule-of-rebasing), re-writing project history can be potentially catastrophic for your collaboration workflow. And, less importantly, rebasing loses the context provided by a merge commit—you can’t see when upstream changes were incorporated into the feature.
@@ -343,8 +340,7 @@ pick 5c67e61 Message for commit #3
 
 When you save and close the file, Git will perform the rebase according to your instructions, resulting in project history that looks like the following:
 
-![1585010476225](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585010476225.png)
-
+![1585010476225](./${img}\1585010476225.png)
 Eliminating insignificant commits like this makes your feature’s history much easier to understand. This is something that `git merge` simply cannot do.
 
 ## <font color="green">The Golden Rule of Rebasing(黄金法则)</font>
@@ -360,8 +356,7 @@ git rebase feature
 
 
 
-![1585010530082](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585010530082.png)
-
+![1585010530082](./${img}\1585010530082.png)
 The rebase moves all of the commits in `master` onto the tip of `feature`. The problem is that this only happened in *your* repository. All of the other developers are still working with the original `master`. Since rebasing results in brand new commits, Git will think that your `master` branch’s history has diverged from everybody else’s.
 
 The only way to synchronize the two `master` branches is to merge them back together, resulting in an extra merge commit *and* two sets of commits that contain the same changes (the original ones, and the ones from your rebased branch). Needless to say, this is a very confusing situation.
@@ -387,8 +382,7 @@ Rebasing can be incorporated into your existing Git workflow as much or as littl
 
 The first step in any workflow that leverages `git rebase` is to create a dedicated branch for each feature. This gives you the necessary branch structure to safely utilize rebasing:
 
-![1585010767906](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585010767906.png)
-
+![1585010767906](./${img}\1585010767906.png)
 
 
 ### Local Cleanup 使用的rebase的最佳时机
@@ -406,8 +400,7 @@ git rebase -i HEAD~3		# 意思是重新整理从HEAD开始的三次提交记录
 
 <font color="blue">By specifying `HEAD~3` as the new base, you’re not actually moving the branch—you’re just interactively re-writing the 3 commits that follow it. Note that this will *not* incorporate upstream changes into the `feature` branch. </font>
 
-![1585011052691](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011052691.png)
-
+![1585011052691](./${img}\1585011052691.png)
 
 
 实例展示:
@@ -427,8 +420,7 @@ ce538f8 append 789 to a.txt
 
 
 
-![1585016955904](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585016955904.png)
-
+![1585016955904](./${img}\1585016955904.png)
 
 
 对图上内容进行如下修改:
@@ -445,14 +437,12 @@ squash 7e0f5cf
 
 修改后保存并退出，会自动弹出下图。提示将三个提交合并成一个提交，编辑新的提交信息
 
-![1585017057805](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585017057805.png)
-
+![1585017057805](./${img}\1585017057805.png)
 
 
 更改提交信息并保存后，可以通过git log看到三次提交合已经合并为一个提交
 
-![1585017435709](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585017435709.png)
-
+![1585017435709](./${img}\1585017435709.png)
 <font color="green">If you want to re-write the entire feature using this method, the `git merge-base` command can be useful to find the original base of the `feature` branch. The following returns the commit ID of the original base, which you can then pass to `git rebase`: </font>
 
 ```
@@ -477,20 +467,17 @@ This use of `git rebase` is similar to a local cleanup (and can be performed sim
 
 For example, if you and another developer named John added commits to the `feature` branch, your repository might look like the following after fetching the remote `feature` branch from John’s repository:
 
-![1585011086600](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011086600.png)
-
+![1585011086600](./${img}\1585011086600.png)
 You can resolve this fork the exact same way as you integrate upstream changes from `master`: either merge your local `feature`with `john/feature`, or rebase your local `feature` onto the tip of `john/feature`.
 
 
 
-![1585011113599](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011113599.png) 
+![1585011113599](./${img}\1585011113599.png)
 
 
 
 
-
-![1585011146545](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011146545.png)
-
+![1585011146545](./${img}\1585011146545.png)
 <font color="green">Note that this rebase doesn’t violate the *Golden Rule of Rebasing*  because only your local `feature` commits are being moved—everything before that is untouched. This is like saying, “add my changes to what John has already done.” In most circumstances, this is more intuitive than synchronizing with the remote branch via a merge commit.</font>
 
 By default, the `git pull` command performs a merge, but you can force it to integrate the remote branch with a rebase by passing it the `--rebase` option.
@@ -511,22 +498,19 @@ After a feature has been approved by your team, you have the option of rebasing 
 
 This is a similar situation to incorporating upstream changes into a feature branch, but since you’re not allowed to re-write commits in the `master` branch, you have to eventually use `git merge` to integrate the feature. However, by performing a rebase before the merge, you’re assured that the merge will be fast-forwarded, resulting in a perfectly linear history. This also gives you the chance to squash any follow-up commits added during a pull request.
 
-![1585011184312](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011184312.png)
+![1585011184312](./${img}\1585011184312.png)
 
 
 
 
 
 
-
-![1585011203951](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011203951.png)
-
+![1585011203951](./${img}\1585011203951.png)
 
 
 
 
-![1585011225887](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585011225887.png)
-
+![1585011225887](./${img}\1585011225887.png)
 
 
 If you’re not entirely comfortable with `git rebase`, you can always perform the rebase in a temporary branch. That way, if you accidentally mess up your feature’s history, you can check out the original branch and try again. For example:

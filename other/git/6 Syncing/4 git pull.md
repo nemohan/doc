@@ -10,22 +10,19 @@ The `git pull` command is used to fetch and download content from a remote repos
 
 <font color="green">The `git pull` command first runs `git fetch` which downloads content from the specified remote repository. Then a `git merge` is executed to merge the remote content refs and heads into a new local merge commit. To better demonstrate the pull and merging process let us consider the following example. Assume we have a repository with a master branch and a remote origin.</font>
 
-![1584932858902](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584932858902.png)
-
+![1584932858902](./${img}\1584932858902.png)
 In this scenario, `git pull` will download all the changes from the point where the local and master diverged. In this example, that point is E. `git pull` will fetch the diverged remote commits which are A-B-C. The pull process will then create a new local merge commit containing the content of the new diverged remote commits.
 
 
 
 
 
-![1584932923779](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584932923779.png) 
-
+![1584932923779](./${img}\1584932923779.png)
 In the above diagram, we can see the new commit H. This commit is a new merge commit that contains the contents of remote A-B-C commits and has a combined log message. This example is one of a few `git pull` merging strategies. A `--rebase` option can be passed to `git pull` to use a rebase merging strategy instead of a merge commit. The next example will demonstrate how a rebase pull works. Assume that we are at a starting point of our first diagram, and we have executed `git pull --rebase`.
 
 
 
-![1584933015747](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584933015747.png)
-
+![1584933015747](./${img}\1584933015747.png)
 In this diagram, we can now see that a rebase pull does not create the new H commit. Instead, the rebase has copied the remote commits A--B--C and appended them to the local origin/master commit history.
 
 ## Common Options
@@ -58,14 +55,12 @@ Gives verbose output during a pull which displays the content being downloaded a
 
 You can think of `git pull` as Git's version of `svn update`. It’s an easy way to synchronize your local repository with upstream changes. The following diagram explains each step of the pulling process.
 
-![1584933345573](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584933345573.png)
+![1584933345573](./${img}\1584933345573.png)
 
 
 
 
-
-![1584933365004](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584933365004.png)
-
+![1584933365004](./${img}\1584933365004.png)
 
 
 You start out thinking your repository is synchronized, but then `git fetch` reveals that origin's version of master has progressed since you last checked it. Then `git merge` immediately integrates the remote master into the local one.

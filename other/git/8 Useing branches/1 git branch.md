@@ -3,8 +3,7 @@
 
 This document is an in-depth review of the `git branch` command and a discussion of the overall Git branching model. Branching is a feature available in most modern version control systems. Branching in other VCS's can be an expensive operation in both time and disk space. In Git, branches are a part of your everyday development process. <font color="green">Git branches are effectively a pointer to a snapshot of your changes. When you want to add a new feature or fix a bug—no matter how big or how small—you spawn a new branch to encapsulate your changes. This makes it harder for unstable code to get merged into the main code base, and it gives you the chance to clean up your future's history before merging it into the main branch.</font>
 
-![1585098327438](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585098327438.png)
-
+![1585098327438](./${img}\1585098327438.png)
 The diagram above visualizes a repository with two isolated lines of development, one for a little feature, and one for a longer-running feature. By developing them in branches, it’s not only possible to work on both of them in parallel, but it also keeps the main `master` branch free from questionable code.
 
 The implementation behind Git branches is much more lightweight than other version control system models. Instead of copying files from directory to directory, Git stores a branch as a reference to a commit. In this sense, a branch represents the tip of a series of commits—it's not a container for commits. The history for a branch is extrapolated through the commit relationships.
@@ -59,8 +58,7 @@ List all remote branches.
 
 <font color="green">It's important to understand that branches are just pointers to commits. When you create a branch, all Git needs to do is create a new pointer, it doesn’t change the repository in any other way. If you start with a repository that looks like this:</font>
 
-![1585100939332](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585100939332.png)
-
+![1585100939332](./${img}\1585100939332.png)
 Then, you create a branch using the following command:
 
 ```
@@ -69,8 +67,7 @@ git branch crazy-experiment
 
 The repository history remains unchanged. All you get is a new pointer to the current commit:
 
-![1585100961457](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585100961457.png)
-
+![1585100961457](./${img}\1585100961457.png)
 Note that this only *creates* the new branch. To start adding commits to it, you need to select it with `git checkout`, and then use the standard `git add` and `git commit` commands. 
 
 ## Creating remote branches

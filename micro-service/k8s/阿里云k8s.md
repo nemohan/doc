@@ -2,4 +2,4 @@
 
 使用阿里云k8s时，可以配置k8s服务，若服务为负载均衡，会自动创建阿里负载均衡服务
 
-![1584760006449](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584760006449.png)
+![1584760006449](./${img}\1584760006449.png)

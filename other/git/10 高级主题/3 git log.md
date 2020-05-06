@@ -263,8 +263,7 @@ git log master..feature
 
 The `master..feature` range contains all of the commits that are in the `feature` branch, but aren’t in the `master` branch. In other words, this is how far `feature` has progressed since it forked off of `master`. You can visualize this as follows:
 
-![1585528332318](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585528332318.png)
-
+![1585528332318](./${img}\1585528332318.png)
 Note that if you switch the order of the range (`feature..master`), you will get all of the commits in `master`, but not in `feature`. If `git log` outputs commits for both versions, this tells you that your history has diverged.
 
 ### Filtering Merge Commits

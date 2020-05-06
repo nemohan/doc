@@ -39,8 +39,7 @@ controller-manager Healthy ok
 etcd-0 Healthy {"health": "true"}
 ~~~
 
-![1587176891349](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587176891349.png)
-
+![1587176891349](./${img}\1587176891349.png)
 ##### 在worker node上运行的组件:
 
 * Kubelet
@@ -61,8 +60,7 @@ etcd-0 Healthy {"health": "true"}
 
 架构示意图如下:
 
-![1587174246390](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587174246390.png)
-
+![1587174246390](./${img}\1587174246390.png)
 
 
 
@@ -89,16 +87,14 @@ kubectl get po -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by 
 
 #### API Server的工作机制
 
-![1587175168427](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587175168427.png)
-
+![1587175168427](./${img}\1587175168427.png)
 
 
 ##### 事件通知机制
 
 API server 并不会创建pod,也不会管理service 的endoints，这些都是Controller Manager的工作。也不会命令这些控制器该做什么。而是使用事件通知的方式，控制器订阅自己感兴趣的事件，当事件发生时采取对应的行动。
 
-![1587180731268](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587180731268.png)
-
+![1587180731268](./${img}\1587180731268.png)
 
 
 当部署Pod时，可以用下面命令观察事件:
@@ -138,22 +134,19 @@ kubectl get pods --watch
 
 如下图，一般用于以pod方式运行的Control Plane组件
 
-![1587258789835](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587258789835.png)
-
+![1587258789835](./${img}\1587258789835.png)
 
 
 #### k8s service proxy(服务代理-kube-proxy)
 
 初代的service proxy 以运行在用户态的代理来实现, 即一个服务进程接收链接并代理到Pod。为了拦截到service ip的链接，service proxy 会配置iptables
 
-![1587258934970](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587258934970.png)
-
+![1587258934970](./${img}\1587258934970.png)
 
 
 现代版本的service proxy 直接通过修改iptables,将链接直接转发到对应的pod，而不再经过proxy server。也叫做iptables proxy
 
-![1587259196442](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587259196442.png)
-
+![1587259196442](./${img}\1587259196442.png)
 
 
 二者的差异:
@@ -165,14 +158,12 @@ kubectl get pods --watch
 
 ### 以pod的创建为例，展示k8s的完整工作流程
 
-![1587261172582](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587261172582.png)
+![1587261172582](./${img}\1587261172582.png)
 
 
 
 
-
-![1587261231562](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587261231562.png)
-
+![1587261231562](./${img}\1587261231562.png)
 
 
 ### 构建高可用k8s集群
@@ -188,20 +179,17 @@ control plane 所包含的组件:
 
 
 
-![1587430082686](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587430082686.png)
-
+![1587430082686](./${img}\1587430082686.png)
 
 
 controller manager 和scheduler 需要使用leader-election(领导选举)算法，来产生主节点。这些组件使用的选举算法是通过在API server上创建资源(endpoints资源）来实现，第一个创建资源成功的就是leader
 
-![1587431189604](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587431189604.png)
-
+![1587431189604](./${img}\1587431189604.png)
 
 
 下图中control-plane.alpha.kubernetes.io/leader, holderIdentity的值即leader的名称
 
-![1587431435804](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587431435804.png)
-
+![1587431435804](./${img}\1587431435804.png)
 ### 常用命令
 
 ~~~

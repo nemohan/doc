@@ -41,8 +41,7 @@ fmt.Printf("%d %[1]x %#[1]x %#[1]X\n", x)
 // 3735928559 deadbeef 0xdeadbeef 0XDEADBEEF
 ~~~
 
-![1585878487880](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585878487880.png)
-
+![1585878487880](./${img}\1585878487880.png)
 
 
 "*"  指示打印可变数量的字符，depth * 2 指定字符数量， "+"指定字符
@@ -138,8 +137,7 @@ a:[2] len:1 cap:3
 
 
 
-![1586135935743](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586135935743.png)
-
+![1586135935743](./${img}\1586135935743.png)
 
 
 ##### 确定slice是否为空用len(s) == 0而不是 s == nil
@@ -329,8 +327,7 @@ fmt.Printf("c.x:%d\n", c.x)  //编译错误，c.x歧义
 
 
 
-![1586219439842](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1586219439842.png)
-
+![1586219439842](./${img}\1586219439842.png)
 
 
 常见用法:
@@ -623,8 +620,7 @@ func main(){
 }
 ~~~
 
-![1587170646772](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587170646772.png)
-
+![1587170646772](./${img}\1587170646772.png)
 
 
 ### channel
@@ -750,8 +746,7 @@ func TestName(t *testing.T){
 
 使用-v 参数可以输出用例函数的名称及运行时间。如下
 
-![1587950896824](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1587950896824.png)
-
+![1587950896824](./${img}\1587950896824.png)
 
 
 -run 参数， 其参数值是正则表达式. 指示go test只运行匹配的用例函数
@@ -815,14 +810,12 @@ func BenchmarkIsPalindrome(b *testing.B) {
 
 在默认情况下，使用go test 不会运行测试文件中的benchmark函数。可以指定-bench 标志来选择执行哪些benchmark函数，-bench的值是正则表达式。若-bench的值是"."则运行测试文件中所有的benchmark函数
 
-![1588144332242](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1588144332242.png)
-
+![1588144332242](./${img}\1588144332242.png)
 
 
 可以在benchmark过程中，指定-benchmem标志查看内存分配情况
 
-![1588145485788](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1588145485788.png)
-
+![1588145485788](./${img}\1588145485788.png)
 ##### profile
 
 * cpu profile  go test -cpuprofile=cpu.out

@@ -6,8 +6,7 @@
 
 Git is all about commits: you stage commits, create commits, view old commits, and transfer commits between repositories using many different Git commands. The majority of these commands operate on a commit in some form or another, and many of them accept a commit reference as a parameter. For example, you can use `git checkout` to view an old commit by passing in a commit hash, or you can use it to switch branches by passing in a branch name.
 
-![1585363199304](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585363199304.png)
-
+![1585363199304](./${img}\1585363199304.png)
 By understanding the many ways to refer to a commit, you make all of these commands that much more powerful. In this chapter, we’ll shed some light on the internal workings of common commands like `git checkout`, `git branch`, and `git push` by exploring the many methods of referring to a commit.
 
 We’ll also learn how to revive seemingly “lost” commits by accessing them through Git’s reflog mechanism.
@@ -208,8 +207,7 @@ git show HEAD^2^1
 
 To clarify how `~` and `^` work, the following figure shows you how to reach any commit from `A` using relative references. In some cases, there are multiple ways to reach a commit.
 
-![1585365912710](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585365912710.png)
-
+![1585365912710](./${img}\1585365912710.png)
 Relative refs can be used with the same commands that a normal ref can be used. For example, all of the following commands use a relative reference:
 
 ```

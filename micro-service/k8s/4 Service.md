@@ -8,8 +8,7 @@
 
 为什么要引入service，pod之间可以相互访问、当然也可以外部的客户端访问内部的pod。但随着pod的创建和销毁，其ip地址也在跟着变化。service可以提供固定的ip地址，可以解决这个问题。service可以为一个或多个副本pod提供相同的ip地址。如此一来，客户端便不用关心pod的IP地址，也不用关心有几个pod在提供服务。如下图所示
 
-![1585387188770](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585387188770.png)
-
+![1585387188770](./${img}\1585387188770.png)
 <font color="red"> service 也是根据label selector来确定哪些pod由特定service负责</font>
 
 ###### 会话粘性
@@ -19,8 +18,7 @@ service 会随机选择请求转发到哪个pod，所以可以设置会话粘性
 * 没有，随机选择
 * 根据客户端ip地址
 
-![1585389931571](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585389931571.png)
-
+![1585389931571](./${img}\1585389931571.png)
 
 
 ##### <font color="red">EndPoint 资源</font>
@@ -29,14 +27,12 @@ service 会随机选择请求转发到哪个pod，所以可以设置会话粘性
 
 
 
-![1585657631700](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585657631700.png)
-
+![1585657631700](./${img}\1585657631700.png)
 
 
 若创建service时，没有指定label selector那么就不会创建EndPoints资源. 如此一来就可以手动创建EndPoints资源，下图是创建EndPoints资源的描述文件
 
-![1585658197721](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585658197721.png)
-
+![1585658197721](./${img}\1585658197721.png)
 注意：
 
 * 是endpints 而不是endpoint
@@ -48,8 +44,7 @@ service 会随机选择请求转发到哪个pod，所以可以设置会话粘性
 
 可以通过为外部服务创建service和endpoints的形式，让集群内部的pod访问。
 
-![1585658500955](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585658500955.png)
-
+![1585658500955](./${img}\1585658500955.png)
 ###### 为外部服务创建集群内别名
 
 待补充
@@ -65,8 +60,7 @@ service 会随机选择请求转发到哪个pod，所以可以设置会话粘性
 
 下图所示某个容器内的环境变量:
 
-![1585390971073](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585390971073.png)
-
+![1585390971073](./${img}\1585390971073.png)
 
 
 ##### 内部pod访问外部网络
@@ -95,8 +89,7 @@ service 的集群内部地址，外部不可访问
 
 下图是NodePort 类型service的描述文件:
 
-![1585451106680](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585451106680.png)
-
+![1585451106680](./${img}\1585451106680.png)
 上图有三个端口：
 
 * 8080 是pod或容器使用的端口, 
@@ -111,14 +104,12 @@ service 的集群内部地址，外部不可访问
 
 下图是我们运行在阿里云k8s上的一个NodePort类型的service:
 
-![1585451440384](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585451440384.png)
-
+![1585451440384](./${img}\1585451440384.png)
 
 
 <font color="red">从某个Node到达的流量不一定会转发到运行在该Node上的Pod上面，如下图所示，假设以Node2 的地址作为对外地址，当链接到达Node2的端口后，该链接既可以转发到运行在Node1的pod上，也可以转发到运行在Node2的Pod上。当然可以设置</font>
 
-![1585453733917](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585453733917.png)
-
+![1585453733917](./${img}\1585453733917.png)
 
 
 NodePort类型的进入流量是什么样的？
@@ -137,20 +128,17 @@ Loadbalancer是NodePort的拓展。若单独使用NodePort service，任意一�
 
 下图是loadbalancer的资源描述文件，只需要指定loadbalancer使用的端口80和pod使用的端口。k8s会自动分配node使用的端口
 
-![1585454209124](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585454209124.png)
-
+![1585454209124](./${img}\1585454209124.png)
 
 
 流量示意图:
 
-![1585454172286](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585454172286.png)
-
+![1585454172286](./${img}\1585454172286.png)
 
 
 下图是使用阿里云提供的loadbalancer serivce的一个描述文件:
 
-![1585454484339](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585454484339.png)
-
+![1585454484339](./${img}\1585454484339.png)
 
 
 使用loadbalancer后流量:
@@ -165,18 +153,15 @@ loadbalancer pot -> node port -> service port -> pod port
 
 其实ingress controller一般是用nginx，根据域名或路径访问对应的服务
 
-![1585448089867](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585448089867.png)
-
+![1585448089867](./${img}\1585448089867.png)
 ingress的工作示意，ingress controller 并不会将请求转发到service，而是直接将请求递交给pod
 
-![1585446048689](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585446048689.png)
-
+![1585446048689](./${img}\1585446048689.png)
 
 
 ingress的资源描述文件:
 
-![1585455915652](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585455915652.png)
-
+![1585455915652](./${img}\1585455915652.png)
 
 
 ###### <font color="red">两种使用方式</font>
@@ -185,12 +170,10 @@ ingress的资源描述文件:
 
 这的servicePort 是barservice使用的端口？ 还是intress controller 使用的端口？
 
-![1585448587621](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585448587621.png)
-
+![1585448587621](./${img}\1585448587621.png)
 <font color="red">不同的主机域名,每个域名对应一个service:</font>
 
-![1585448615931](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585448615931.png)
-
+![1585448615931](./${img}\1585448615931.png)
 为Ingress配置https:
 
 * 创建包含证书的secret资源
@@ -209,8 +192,7 @@ secret "tls-secret" created
 
 在ingress描述文件中引用上面创建的secret
 
-![1585446708563](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585446708563.png)
-
+![1585446708563](./${img}\1585446708563.png)
 
 
 
@@ -235,22 +217,19 @@ secret "tls-secret" created
 
 
 
-![1585384355951](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585384355951.png)
+![1585384355951](./${img}\1585384355951.png)
 
 
 
 
-
-![1585384376354](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585384376354.png)
-
+![1585384376354](./${img}\1585384376354.png)
 
 
 
 
 
 
-![1585384071732](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1585384071732.png)
-
+![1585384071732](./${img}\1585384071732.png)
 
 
 ### 总结

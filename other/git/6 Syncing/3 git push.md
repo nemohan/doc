@@ -34,8 +34,7 @@ git push  <remote> --tags
 
 `git push` is most commonly used to publish an upload local changes to a central repository. After a local repository has been modified a push is executed to share the modifications with remote team members.
 
-![1584932328862](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584932328862.png)
-
+![1584932328862](./${img}\1584932328862.png)
 The above diagram shows what happens when your local `master` has progressed past the central repository’s `master` and you publish changes by running `git push origin master`. Notice how `git push` is essentially the same as running `git merge master` from inside the remote repository.
 
 ## Git push and syncing

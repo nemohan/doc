@@ -14,8 +14,7 @@ The `git remote` command lets you create, view, and delete connections to other 
 
 For example, the following diagram shows two remote connections from your repo into the central repo and another developer’s repo. Instead of referencing them by their full URLs, you can pass the origin and john shortcuts to other Git commands.
 
-![1584847129852](C:\Users\lenovo\AppData\Roaming\Typora\typora-user-images\1584847129852.png)
-
+![1584847129852](./${img}\1584847129852.png)
 ## Git remote usage overview
 
 The `git remote` command is essentially an interface for managing a list of remote entries that are stored in the repository's `./.git/config` file. The following commands are used to view the current state of the remote list.
