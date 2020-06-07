@@ -67,6 +67,20 @@ func timeSleep(ns int64) {
 
 
 
+##### addtimer
+
+runtime/time.go
+
+~~~go
+func addtimer(t *timer) {
+	lock(&timers.lock)
+	addtimerLocked(t)
+	unlock(&timers.lock)
+}
+~~~
+
+
+
 ### addtimerLocked
 
 ~~~go

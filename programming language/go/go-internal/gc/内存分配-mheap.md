@@ -298,6 +298,8 @@ func (h *mheap) alloc_m(npage uintptr, sizeclass int32, large bool) *mspan {
 		// Record span info, because gc needs to be
 		// able to map interior pointer to containing span.
 		atomic.Store(&s.sweepgen, h.sweepgen)
+        
+        //进行G的时候，会使用h.sweepSpans来标记内存
 		h.sweepSpans[h.sweepgen/2%2].push(s) // Add to swept in-use list.
 		s.state = _MSpanInUse
 		s.allocCount = 0
@@ -977,7 +979,7 @@ type gcSweepBuf struct {
 
 	// index is the first unused slot in the logical concatenation
 	// of all blocks. It is accessed atomically.
-	index uint32
+	index uint32   //也可以认为当前的index数值
 }
 
 const (
@@ -995,6 +997,10 @@ type gcSweepBlock struct {
 
 
 ##### gcSweepBuf.push
+
+runtime/mgcsweepbuf.go
+
+* 将mspan放到合适的位置
 
 ~~~go
 // push adds span s to buffer b. push is safe to call concurrently
@@ -1063,5 +1069,25 @@ retry:
 	block.spans[bottom] = s
 }
 
+~~~
+
+
+
+##### gcSweepBuf.numBlocks
+
+runtime/mgcsweepbuf.go
+
+* numBlocks确定有多少个gcSweepBlock
+
+~~~go
+// numBlocks returns the number of blocks in buffer b. numBlocks is
+// safe to call concurrently with any other operation. Spans that have
+// been pushed prior to the call to numBlocks are guaranteed to appear
+// in some block in the range [0, numBlocks()), assuming there are no
+// intervening pops. Spans that are pushed after the call may also
+// appear in these blocks.
+func (b *gcSweepBuf) numBlocks() int {
+	return int((atomic.Load(&b.index) + gcSweepBlockEntries - 1) / gcSweepBlockEntries)
+}
 ~~~
 
