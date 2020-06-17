@@ -29,7 +29,7 @@ Of course, there’s nothing stopping you from giving certain Git repos special 
 
 `git clone` is primarily used to point to an existing repo and make a clone or copy of that repo at in a new directory, at another location. The original repository can be located on the local filesystem or on remote machine accessible supported protocols. The `git clone` command copies an existing Git repository. This is sort of like SVN checkout, except the “working copy” is a full-fledged Git repository—it has its own history, manages its own files, and is a completely isolated environment from the original repository.
 
-As a convenience, cloning automatically creates a remote connection called "origin" pointing back to the original repository. This makes it very easy to interact with a central repository. This automatic connection is established by creating Git refs to the remote branch heads under `refs/remotes/origin` and by initializing `remote.origin.url` and `remote.origin.fetch` configuration variables.
+<font color="red">As a convenience, cloning automatically creates a remote connection called "origin" pointing back to the original repository. This makes it very easy to interact with a central repository. This automatic connection is established by creating Git refs to the remote branch heads under `refs/remotes/origin` and by initializing `remote.origin.url` and `remote.origin.fetch` configuration variables.</font>
 
 An example demonstrating using `git clone` can be found on the [setting up a repository guide](https://www.atlassian.com/git/tutorials/setting-up-a-repository). The example below demonstrates how to obtain a local copy of a central repository stored on a server accessible at `example.com` using the SSH username john:
 
@@ -70,7 +70,7 @@ history of commits specified by the option depth=1. In this example a clone of `
 
 ### git clone -branch
 
-The `-branch` argument lets you specify a specific branch to clone instead of the branch the remote `HEAD` is pointing to, usually the master branch. In addition you can pass a tag instead of branch for the same effect.
+<font color="green">The `-branch` argument lets you specify a specific branch to clone instead of the branch the remote `HEAD` is pointing to, usually the master branch. In addition you can pass a tag instead of branch for the same effect.</font>
 
  
 
@@ -131,13 +131,13 @@ Hyper text transfer protocol. The protocol of the web, most commonly used for tr
 
 In this document we took a deep look at `git clone`. The most important takeaways are:
 
-\1. `git clone` is used to create a copy of a target repo
+* `git clone` is used to create a copy of a target repo
 
-\2. The target repo can be local or remote
+* The target repo can be local or remote
 
-\3. Git supports a few network protocols to connect to remote repos
+* Git supports a few network protocols to connect to remote repos
 
-\4. There are many different configuration options available that change the content of the clone
+* There are many different configuration options available that change the content of the clone
 
 
 For further, deeper reference on `git clone` functionality, consult the [official Git documentation](https://git-scm.com/docs/git-clone). We also cover practical examples of git clone in our [setting up a repository guide](https://www.atlassian.com/git/tutorials/setting-up-a-repository).
