@@ -2,9 +2,13 @@
 
 
 
+[TOC]
+
+
+
 ### 总结
 
-git stash 只stash被跟踪(tracked)的文件
+git stash  默认情况下只stash被跟踪(tracked)的文件，
 
 [git add](https://www.atlassian.com/git/tutorials/saving-changes)[git commit](https://www.atlassian.com/git/tutorials/saving-changes/git-commit)[git diff](https://www.atlassian.com/git/tutorials/saving-changes/git-diff)[git stash](https://www.atlassian.com/git/tutorials/saving-changes/git-stash)[.gitignore](https://www.atlassian.com/git/tutorials/saving-changes/gitignore)
 
@@ -105,7 +109,7 @@ But it will **not** stash:
 
 So if we add a third file to our example above, but don't stage it (i.e. we don't run `git add`), `git stash` won't stash it.
 
-```
+```bash
 $ script.js
 
 $ git status
@@ -135,7 +139,7 @@ Untracked files:
 
 Adding the `-u` option (or `--include-untracked`) tells `git stash` to also stash your untracked files:
 
-```
+```bash
 $ git status
 On branch master
 Changes to be committed:
@@ -323,7 +327,7 @@ $ git log --oneline --graph stash@{0}
 如上所说最近的stash 的sha1值保存在.git/refs/stash中。而所有的stash 记录则在.git/log/refs/stash中
 ```
 
-Depending on what you stashed, a single `git stash` operation creates either two or three new commits. The commits in the diagram above are:
+<font color="red">Depending on what you stashed, a single `git stash` operation creates either two or three new commits. The commits in the diagram above are:</font>
 
 - `stash@{0}`, a new commit to store the tracked files that were in your working copy when you ran `git stash`
 
@@ -331,22 +335,12 @@ Depending on what you stashed, a single `git stash` operation creates either two
 
 - `stash@{0}`'s second parent, a new commit representing the index when you ran `git stash`
 
-- ```
-  stash@{0}
-  ```
-
-  's third parent, a new commit representing untracked files that were in your working copy when you ran
-
-   
-
-  ```
-  git stash
-  ```
-
+- `stash@{0}`'s third parent, a new commit representing untracked files that were in your working copy when you ran`git stash`
+  
   . This third parent only created if:
 
   - your working copy actually contained untracked files; and
-  - you specified the `--include-untracked` or `--all` option when invoked `git stash`.
+- you specified the `--include-untracked` or `--all` option when invoked `git stash`.
 
 How `git stash` encodes your worktree and index as commits:
 

@@ -7,7 +7,7 @@
 ## Comparing changes with git diff
 
 Diffing is a function that takes two input data sets and outputs the changes between them. `git diff` is a multi-use Git command that when executed runs a diff function on Git data sources. These data sources can be commits, branches, files and more. This document will discuss common invocations of `git diff` and diffing work flow patterns. The `git diff` command is often used along with `git status` and `git log` to analyze the current state of a Git repo.
- 
+
 
 ## Reading diffs: outputs
 
@@ -100,7 +100,7 @@ The remaining content of the diff chunk displays the recent changes. Each change
 
 `git diff` also has a special mode for highlighting changes with much better granularity: `‐‐color-words`. This mode tokenizes added and removed lines by whitespace and then diffs those.
 
-```
+```bash
 $:> git diff --color-words
 diff --git a/diff_test.txt b/diff_test.txt
 index 6b0c6cf..b37e70a 100644
@@ -161,7 +161,7 @@ The `git diff` command can be passed an explicit file path option. When a file p
 git diff HEAD ./path/to/file
 ```
 
-This example is scoped to `./path/to/file` when invoked, it will compare the specific changes in the working directory, against the index, showing the changes that are not staged yet. By default `git diff` will execute the comparison against `HEAD`. Omitting `HEAD` in the example above `git diff ./path/to/file` has the same effect.
+<font color="red">This example is scoped to `./path/to/file` when invoked, it will compare the specific changes in the working directory, against the index, showing the changes that are not staged yet. By default `git diff` will execute the comparison against `HEAD`. Omitting `HEAD` in the example above `git diff ./path/to/file` has the same effect.</font>
 
 ```
 git diff --cached ./path/to/file
@@ -181,6 +181,8 @@ By default `git diff` will show you any uncommitted changes since the last commi
 git diff
 ```
 
+
+
 ## Comparing files between two different commits
 
 `git diff` can be passed Git refs to commits to diff. Some example refs are, `HEAD`, tags, and branch names. Every commit in Git has a commit ID which you can get when you execute `GIT LOG`. You can also pass this commit ID to `git diff`.
@@ -194,6 +196,8 @@ ce489262a1ee34340440e55a0b99ea6918e19e7a rename some classes
 
 $:> git diff 957fbc92b123030c389bf8b4b874522bdf2db72c ce489262a1ee34340440e55a0b99ea6918e19e7a
 ```
+
+
 
 ## Comparing branches
 
@@ -212,6 +216,8 @@ git diff branch1...other-feature-branch
 ```
 
 The three dot operator initiates the diff by changing the first input parameter `branch1`. It changes `branch1` into a ref of the shared common ancestor commit between the two diff inputs, the shared ancestor of `branch1` and other-feature-branch. The last parameter input parameter remains unchanged as the tip of other-feature-branch.
+
+
 
 ## Comparing files from two branches
 

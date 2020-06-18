@@ -1,5 +1,9 @@
 # .gitignore
 
+[TOC]
+
+
+
 [git add](https://www.atlassian.com/git/tutorials/saving-changes)[git commit](https://www.atlassian.com/git/tutorials/saving-changes/git-commit)[git diff](https://www.atlassian.com/git/tutorials/saving-changes/git-diff)[git stash](https://www.atlassian.com/git/tutorials/saving-changes/git-stash)[.gitignore](https://www.atlassian.com/git/tutorials/saving-changes/gitignore)
 
 Git sees every file in your working copy as one of three things:
@@ -47,7 +51,7 @@ Ignored files are tracked in a special file named `.gitignore` that is checked i
 | `debug[01].log`                      | `debug0.log` `debug1.log` *but not*  `debug2.log` `debug01.log` | Square brackets match a single character form the specified set. |
 | `debug[!01].log`                     | `debug2.log` *but not* `debug0.log` `debug1.log` `debug01.log` | An exclamation mark can be used to match any character except one from the specified set. |
 | `debug[a-z].log`                     | `debuga.log` `debugb.log` *but not* `debug1.log`             | Ranges can be numeric or alphabetic.                         |
-| `logs`                               | `logs` `logs/debug.log` `logs/latest/foo.bar` `build/logs` `build/logs/debug.log` | If you don't append a slash, the pattern will match both files and the contents of directories with that name. In the example matches on the left, both directories and files named *logs* are ignored |
+| `logs`                               | `logs` `logs/debug.log` `logs/latest/foo.bar` `build/logs` `build/logs/debug.log` | <font color="green">If you don't append a slash, the pattern will match both files and the contents of directories with that name. In the example matches on the left, both directories and files named *logs* are ignored</font> |
 | logs/                                | `logs/debug.log` `logs/latest/foo.bar` `build/logs/foo.bar` `build/logs/latest/debug.log` | Appending a slash indicates the pattern is a directory. The entire contents of any directory in the repository matching that name – including all of its files and subdirectories – will be ignored |
 | `logs/` `!logs/important.log`        | `logs/debug.log` `logs/important.log`                        | Wait a minute! Shouldn't `logs/important.log` be negated in the example on the left  Nope! Due to a performance-related quirk in Git, you *can not* negate a file that is ignored due to a pattern matching a directory |
 | `logs/**/debug.log`                  | `logs/debug.log` `logs/monday/debug.log` `logs/monday/pm/debug.log` | A double asterisk matches zero or more directories.          |
@@ -76,7 +80,7 @@ Git ignore rules are usually defined in a `.gitignore` file at the root of your 
 
 ## Personal Git ignore rules
 
-You can also define personal ignore patterns for a particular repository in a special file at `.git/info/exclude`. These are not versioned, and not distributed with your repository, so it's an appropriate place to include patterns that will likely only benefit you. For example if you have a custom logging setup, or special development tools that produce files in your repository's working directory, you could consider adding them to `.git/info/exclude` to prevent them from being accidentally committed to your repository.
+<font color="green">You can also define personal ignore patterns for a particular repository in a special file at `.git/info/exclude`. These are not versioned, and not distributed with your repository, so it's an appropriate place to include patterns that will likely only benefit you. For example if you have a custom logging setup, or special development tools that produce files in your repository's working directory, you could consider adding them to `.git/info/exclude` to prevent them from being accidentally committed to your repository.</font>
 
 ## Global Git ignore rules
 
