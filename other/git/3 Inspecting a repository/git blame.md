@@ -50,7 +50,7 @@ $ git log
  README.md edited online with Bitbucket
 ```
 
-`git blame` only operates on individual files. A file-path is required for any useful output. The default execution of `git blame` will simply output the commands help menu. For this example, we will operate on the README.MD file. It is a common open source software practice to include a README file in the root of a git repository as documentation source for the project.
+<font color="red">`git blame` only operates on individual files</font>. A file-path is required for any useful output. The default execution of `git blame` will simply output the commands help menu. For this example, we will operate on the README.MD file. It is a common open source software practice to include a README file in the root of a git repository as documentation source for the project.
 
 ```
 git blame README.MD
