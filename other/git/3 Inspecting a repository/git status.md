@@ -2,6 +2,8 @@
 
 [git status](https://www.atlassian.com/git/tutorials/inspecting-a-repository)[git tag](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-tag)[git blame](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-blame)
 
+git status 用来查看工作目录（工作区）、暂存区(staging area)的状态。展示哪些文件修改已经放入暂存区、哪些没有、哪些文件未被跟踪
+
 ## git status
 
 The `git status` command displays the state of the working directory and the staging area. It lets you see which changes have been staged, which haven’t, and which files aren’t being tracked by Git. Status output does *not* show you any information regarding the committed project history. For this, you need to use [`git log`](https://www.atlassian.com/git/tutorials/inspecting-a-repository/git-log).
@@ -27,18 +29,21 @@ List which files are staged, unstaged, and untracked.
 
 The `git status` command is a relatively straightforward command. It simply shows you what's been going on with `git add` and `git commit`. Status messages also include relevant instructions for staging/unstaging files. Sample output showing the three main categories of a `git status` call is included below:
 
-```
+```bash
 # On branch master
 # Changes to be committed:
 # (use "git reset HEAD <file>..." to unstage)
 #
 #modified: hello.py
+
 #
 # Changes not staged for commit:
 # (use "git add <file>..." to update what will be committed)
 # (use "git checkout -- <file>..." to discard changes in working directory)
 #
 #modified: main.py
+
+
 #
 # Untracked files:
 # (use "git add <file>..." to include in what will be committed)
