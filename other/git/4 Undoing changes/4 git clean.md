@@ -1,5 +1,9 @@
 # git clean
 
+[TOC]
+
+git clean 用于删除未被跟踪的文件
+
 [git checkout](https://www.atlassian.com/git/tutorials/undoing-changes)[git clean](https://www.atlassian.com/git/tutorials/undoing-changes/git-clean)[git revert](https://www.atlassian.com/git/tutorials/undoing-changes/git-revert)[git reset](https://www.atlassian.com/git/tutorials/undoing-changes/git-reset)[git rm](https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
 
 In this section, we will focus on a detailed discussion of the `git clean` command. `Git clean` is to some extent an 'undo' command. `Git clean` can be considered complementary to other commands like `git reset` and `git checkout`. Whereas these other commands operate on files previously added to the Git tracking index, <font color="red">the `git clean` command operates on untracked files. Untracked files are files that have been created within your repo's working directory but have not yet been added to the repository's tracking index using the `git add` command. To better demonstrate the difference between tracked and untracked files consider the following command line example:</font>
@@ -9,9 +13,13 @@ $ mkdir git_clean_test
 $ cd git_clean_test/
 $ git init .
 Initialized empty Git repository in /Users/kev/code/git_clean_test/.git/
+
 $ echo "tracked" > ./tracked_file
+
 $ git add ./tracked_file
+
 $ echo "untracked" > ./untracked_file
+
 $ mkdir ./untracked_dir && touch ./untracked_dir/file
 $ git status
 On branch master
@@ -41,7 +49,7 @@ Given the previous explanation of the default `git clean` behaviors and caveats,
 -n
 ```
 
-The `-n` option will perform a “dry run” of `git clean`. This will show you which files are going to be removed without actually removing them. It is a best practice to always first perform a dry run of `git clean`. We can demonstrate this option in the demo repo we created earlier.
+<font color="red">The `-n` option will perform a “dry run” of `git clean`. This will show you which files are going to be removed without actually removing them. It is a best practice to always first perform a dry run of `git clean`. We can demonstrate this option in the demo repo we created earlier.</font>
 
 ```
 $ git clean -n
