@@ -1,14 +1,14 @@
 # git revert
 
+[TOC]
+
 https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
-
-
 
 <font color="red">The `git revert` command can be considered an 'undo' type command, however, it is not a traditional undo operation. Instead of removing the commit from the project history, it figures out how to invert the changes introduced by the commit and appends a new commit with the resulting inverse content. This prevents Git from losing history, which is important for the integrity of your revision history and for reliable collaboration.</font>
 
 Reverting should be used when you want to apply the inverse of a commit from your project history. This can be useful, for example, if you’re tracking down a bug and find that it was introduced by a single commit. Instead of manually going in, fixing it, and committing a new snapshot, you can use `git revert` to automatically do all of this for you.
 
-
+![image-20200629103135406](${img}/image-20200629103135406.png)
 
 ## How it works
 
@@ -16,25 +16,30 @@ The `git revert` command is used for undoing changes to a repository's commit hi
 
 To demonstrate let’s create an example repo using the command line examples below:
 
-```
+```bash
 $ mkdir git_revert_test
 $ cd git_revert_test/
 $ git init .
 Initialized empty Git repository in /git_revert_test/.git/
+
 $ touch demo_file
 $ git add demo_file
 $ git commit -am"initial commit"
 [master (root-commit) 299b15f] initial commit
  1 file changed, 0 insertions(+), 0 deletions(-)
  create mode 100644 demo_file
+ 
+ 
 $ echo "initial content" >> demo_file
 $ git commit -am"add new content to demo file"
 [master 3602d88] add new content to demo file
 n 1 file changed, 1 insertion(+)
+
 $ echo "prepended line content" >> demo_file
 $ git commit -am"prepend content to demo file"
 [master 86bb32e] prepend content to demo file
  1 file changed, 1 insertion(+)
+ 
 $ git log --oneline
 86bb32e prepend content to demo file
 3602d88 add new content to demo file
@@ -43,7 +48,7 @@ $ git log --oneline
 
 Here we have initialized a repo in a newly created directory named `git_revert_test`. We have made 3 commits to the repo in which we have added a file `demo_file` and modified its content twice. At the end of the repo setup procedure, we invoke `git log` to display the commit history, showing a total of 3 commits. With the repo in this state, we are ready to initiate a `git revert.`
 
-```
+```bash
 $ git revert HEAD
 [master b9cd081] Revert "prepend content to demo file"
 1 file changed, 1 deletion(-)
@@ -87,11 +92,11 @@ Passing this option will prevent `git revert` from creating a new commit that in
 
 It's important to understand that `git revert` undoes a single commit—it does not "revert" back to the previous state of a project by removing all subsequent commits. In Git, this is actually called a reset, not a revert.
 
+![image-20200629103110187](${img}/image-20200629103110187.png)
 
+<font color="purple">Reverting has two important advantages over resetting. First, it doesn’t change the project history, which makes it a “safe” operation for commits that have already been published to a shared repository. For details about why altering shared history is dangerous, please see the [git reset](https://www.atlassian.com/git/tutorials/undoing-changes/git-reset) page.</font>
 
-Reverting has two important advantages over resetting. First, it doesn’t change the project history, which makes it a “safe” operation for commits that have already been published to a shared repository. For details about why altering shared history is dangerous, please see the [git reset](https://www.atlassian.com/git/tutorials/undoing-changes/git-reset) page.
-
-Second, `git revert` is able to target an individual commit at an arbitrary point in the history, whereas `git reset` can only work backward from the current commit. For example, if you wanted to undo an old commit with `git reset`, you would have to remove all of the commits that occurred after the target commit, remove it, then re-commit all of the subsequent commits. Needless to say, this is not an elegant undo solution. For a more detailed discussion on the differences between `git revert` and other 'undo' commands see [Resetting, Checking Out and Reverting.](https://www.atlassian.com/git/tutorials/resetting-checking-out-and-reverting)  
+<font color="green">Second, `git revert` is able to target an individual commit at an arbitrary point in the history, whereas `git reset` can only work backward from the current commit. For example, if you wanted to undo an old commit with `git reset`, you would have to remove all of the commits that occurred after the target commit, remove it, then re-commit all of the subsequent commits. Needless to say, this is not an elegant undo solution. For a more detailed discussion on the differences between `git revert` and other 'undo' commands see [Resetting, Checking Out and Reverting.](https://www.atlassian.com/git/tutorials/resetting-checking-out-and-reverting)  </font>
 
 ## Summary
 

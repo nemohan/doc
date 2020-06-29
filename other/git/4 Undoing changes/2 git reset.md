@@ -8,6 +8,14 @@
 
 The `git reset` command is a complex and versatile tool for undoing changes. It has three primary forms of invocation. These forms correspond to command line arguments `--soft, --mixed, --hard`. The three arguments each correspond to Git's three internal state management mechanism's, The Commit Tree (HEAD), The Staging Index, and The Working Directory.
 
+
+
+* 使用git reset 时若未指定--soft、--mixed、--hard 三个选项时则默认使用--mixed
+
+* 若未指定commit 则默认使用HEAD
+* 将已经放到暂存区的文件移出暂存区，用git reset <filename>
+* <font color="red">git reset --hard 慎用</font>
+
 ## Git Reset & Three Trees of Git
 
 To properly understand `git reset` usage, we must first understand Git's internal state management systems. Sometimes these mechanisms are called Git's "three trees". Trees may be a misnomer, as they are not strictly traditional tree data-structures. They are, however, node and pointer-based data structures that Git uses to track a timeline of edits. The best way to demonstrate these mechanisms is to create a changeset in a repository and follow it through the three trees. 
@@ -328,7 +336,7 @@ If `git revert` is a “safe” way to undo changes, you can think of `git reset
 
 Whereas reverting is designed to safely undo a public commit, `git reset` is designed to undo local changes to the Staging Index and Working Directory. Because of their distinct goals, the two commands are implemented differently: resetting completely removes a changeset, whereas reverting maintains the original changeset and uses a new commit to apply the undo.
 
-## Don't Reset Public History
+### Don't Reset Public History
 
 You should never use `git reset ` when any snapshots after <commit> have been pushed to a public repository. After publishing a commit, you have to assume that other developers are reliant upon it.
 
@@ -368,19 +376,23 @@ Reset the staging area and the working directory to match the most recent commit
 git reset <commit> 
 ```
 
-Move the current branch tip backward to `commit`, reset the staging area to match, but leave the working directory alone. All changes made since ` `will reside in the working directory, which lets you re-commit the project history using cleaner, more atomic snapshots.
+Move the current branch tip backward to `commit`, reset the staging area to match, but leave the working directory alone. All changes made since `commit `will reside in the working directory, which lets you re-commit the project history using cleaner, more atomic snapshots.
 
-```
+
+
+```bash
 git reset --hard <commit> 
 ```
 
-Move the current branch tip backward to ` ` and reset both the staging area and the working directory to match. This obliterates not only the uncommitted changes, but all commits after, as well.
+Move the current branch tip backward to ` commit` and reset both the staging area and the working directory to match. This obliterates(覆盖、清除的意思) not only the uncommitted changes, but all commits after, as well.
 
-## Unstaging a file
+使用git rest --hard <commit>不仅会清除未提交的更改，在<commit>之后的更改也会被清除
+
+### Unstaging a file
 
 The `git reset` command is frequently encountered while preparing the staged snapshot. The next example assumes you have two files called `hello.py` and `main.py` that you’ve already added to the repository.
 
-```
+```bash
 # Edit both hello.py and main.py
 # Stage everything in the current directory
 git add .
@@ -397,11 +409,11 @@ git commit -m "Edit main.py"
 
 As you can see, `git reset` helps you keep your commits highly-focused by letting you unstage changes that aren’t related to the next commit.
 
-## Removing Local Commits
+### Removing Local Commits
 
 The next example shows a more advanced use case. It demonstrates what happens when you’ve been working on a new experiment for a while, but decide to completely throw it away after committing a few snapshots.
 
-```
+```bash
 # Create a new file called `foo.py` and add some code to it
 # Commit it to the project history
 git add foo.py
