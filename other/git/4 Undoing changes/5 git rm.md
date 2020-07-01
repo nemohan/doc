@@ -2,13 +2,15 @@
 
 https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
 
-
+[TOC]
 
 <font color="red">A common question when getting started with Git is "How do I tell Git not to track a file (or files) any more?" The `git rm` command is used to remove files from a Git repository. It can be thought of as the inverse of the `git add` command.</font>
 
+git rm 相当于rm 命令和git add 的结合体，即首先执行rm删除文件，再执行git add 添加到暂存区。但略有区别即git rm 有安全性检查
+
 ## Git rm Overview
 
-The `git rm` command can be used to remove individual files or a collection of files. The primary function of `git rm` is to remove tracked files from the Git index. Additionally, `git rm` can be used to remove files from both the staging index and the working directory. There is no option to remove a file from only the working directory. The files being operated on must be identical to the files in the current `HEAD`. If there is a discrepancy between the `HEAD` version of a file and the staging index or working tree version, Git will block the removal. This block is a safety mechanism to prevent removal of in-progress changes.
+The `git rm` command can be used to remove individual files or a collection of files. The primary function of `git rm` is to remove tracked files from the Git index. Additionally, `git rm` can be used to remove files from both the staging index and the working directory. There is no option to remove a file from only the working directory.<font color="red"> The files being operated on must be identical to the files in the current `HEAD`. If there is a discrepancy between the `HEAD` version of a file and the staging index or working tree version, Git will block the removal. This block is a safety mechanism to prevent removal of in-progress changes.(被删除的文件x必须和HEAD指向的历史版本保持一致，若不一致，文件x有改动，已放入暂存区或不在暂存区，此时使用git rm 删除x 会被阻止并提示</font>
 
 Note that `git rm` does not remove branches. Learn more about [using git branches](https://www.atlassian.com/git/tutorials/using-branches)
 
@@ -16,12 +18,12 @@ Note that `git rm` does not remove branches. Learn more about [using git branche
 
 Specifies the target files to remove. The option value can be an individual file, a space delimited list of files `file1 file2 file3`, or a wildcard file glob `(~./directory/*)`.
 
-```
+```bash
 -f
 --force
 ```
 
-The `-f`option is used to override the safety check that Git makes to ensure that the files in `HEAD` match the current content in the staging index and working directory.
+**The `-f`option is used to override the safety check that Git makes to ensure that the files in `HEAD` match the current content in the staging index and working director**y.
 
 
 
@@ -40,7 +42,7 @@ The `-f`option is used to override the safety check that Git makes to ensure tha
 
 The `-r` option is shorthand for 'recursive'. When operating in recursive mode `git rm` will remove a target directory and all the contents of that directory.
 
-```
+```bash
 --
 ```
 
@@ -50,7 +52,7 @@ The separator option is used to explicitly distinguish between a list of file na
 --cached
 ```
 
-The cached option specifies that the removal should happen only on the staging index. Working directory files will be left alone.
+**The cached option specifies that the removal should happen only on the staging index. Working directory files will be left alone.**  这有什么用，相当于没有删除文件
 
 ```
 --ignore-unmatch
@@ -70,12 +72,12 @@ The quiet option hides the output of the `git rm` command. The command normally 
 Executing `git rm` is not a permanent update. The command will update the staging index and the working directory. These changes will not be persisted until a new commit is created and the changes are added to the commit history. This means that the changes here can be "undone" using common Git commands.
 
 ```
-git reset HEAD
+git reset HEAD 执行这条命令相当于使用--mixed方式，更新staging index, 将被删除的文件从暂存区移出，但工作目录中仍然没有被删除文件。应该使用git reset --hard
 ```
 
-A reset will revert the current staging index and working directory back to the `HEAD` commit. This will undo a `git rm`.
+A reset will revert the current staging index and working directory back to the `HEAD` commit. This will undo a `git rm`. 
 
-```
+```bash
 git checkout .
 ```
 
@@ -95,7 +97,7 @@ The `git rm` command operates on the current branch only. The removal event is o
 
 ## Why use git rm instead of rm
 
-A Git repository will recognize when a regular shell `rm` command has been executed on a file it is tracking. It will update the working directory to reflect the removal. It will not update the staging index with the removal. An additional `git add` command will have to be executed on the removed file paths to add the changes to the staging index. The `git rm` command acts a shortcut in that it will update the working directory and the staging index with the removal.
+<font color="green">A Git repository will recognize when a regular shell `rm` command has been executed on a file it is tracking. It will update the working directory to reflect the removal. It will not update the staging index with the removal. An additional `git add` command will have to be executed on the removed file paths to add the changes to the staging index. The `git rm` command acts a shortcut in that it will update the working directory and the staging index with the removal.</font>
 
 ## Examples
 

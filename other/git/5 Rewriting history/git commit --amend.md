@@ -1,5 +1,9 @@
 # git commit --amend
 
+[TOC]
+
+
+
 # Rewriting history
 
 ###### Git commit --amend and other methods of rewriting history
@@ -12,13 +16,17 @@ Git's main job is to make sure you never lose a committed change. But it's also 
 
 Git has several mechanisms for storing history and saving changes. These mechanisms include: Commit `--amend`, `git rebase` and `git reflog`. These options give you powerful work flow customization options. By the end of this tutorial, you'll be familiar with commands that will let you restructure your Git commits, and be able to avoid pitfalls that are commonly encountered when rewriting history.
 
+
+
+git rebase, git reflog 用于改写提交历史
+
 ## Changing the Last Commit: `git commit --amend`
 
 <font color="red">The `git commit --amend` command is a convenient way to modify the most recent commit. It lets you combine staged changes with the previous commit instead of creating an entirely new commit. It can also be used to simply edit the previous commit message without changing its snapshot. But, amending does not just alter the most recent commit, it replaces it entirely, meaning the amended commit will be a new entity with its own ref. To Git, it will look like a brand new commit, which is visualized with an asterisk (*) in the diagram below. There are a few common scenarios for using `git commit --amend`. We'll cover usage examples in the following sections.</font>
 
 
 
-### Change most recent Git commit message
+### Change most recent Git commit message(只更改已经提交的 提交备注)
 
 ```
 git commit --amend
@@ -34,7 +42,7 @@ git commit --amend -m "an updated commit message"
 
 Adding the `-m` option allows you to pass in a new message from the command line without being prompted to open an editor.
 
-### Changing committed files
+### Changing committed files（不更改提交备注，更改提交的文件）
 
 The following example demonstrates a common scenario in Git-based development. Let's say we've edited a few files that we would like to commit in a single snapshot, but then we forget to add one of the files the first time around. Fixing the error is simply a matter of staging the other file and committing with the `--amend` flag:
 
