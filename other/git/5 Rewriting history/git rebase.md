@@ -1,6 +1,6 @@
 # git rebase
 
-
+[TOC]
 
 
 
@@ -10,11 +10,9 @@ Rebase is one of two Git utilities that specializes in integrating changes from 
 
 ## What is git rebase?
 
-
-
 Rebasing is the process of moving or combining a sequence of commits to a new base commit. Rebasing is most useful and easily visualized in the context of a feature branching workflow. The general process can be visualized as the following:
 
-
+![image-20200702100120629](${img}/image-20200702100120629.png)
 
 From a content perspective, rebasing is changing the base of your branch from one commit to another making it appear as if you'd created your branch from a different commit. Internally, Git accomplishes this by creating new commits and applying them to the specified base. It's very important to understand that even though the branch looks the same, it's composed of entirely new commits.
 
@@ -31,9 +29,9 @@ Learn more about [git log](https://www.atlassian.com/git/tutorials/git-log) and 
 
 You have two options for integrating your feature into the master branch: merging directly or rebasing and then merging. The former option results in a 3-way merge and a merge commit, while the latter results in a fast-forward merge and a perfectly linear history. The following diagram demonstrates how rebasing onto the master branch facilitates a fast-forward merge.
 
+![image-20200702101255688](${img}/image-20200702101255688.png)
 
-
-Rebasing is a common way to integrate upstream changes into your local repository. Pulling in upstream changes with Git merge results in a superfluous merge commit every time you want to see how the project has progressed. On the other hand, rebasing is like saying, “I want to base my changes on what everybody has already done.”
+<font color="red">Rebasing is a common way to integrate upstream changes into your local repository. Pulling in upstream changes with Git merge results in a superfluous merge commit every time you want to see how the project has progressed. On the other hand, rebasing is like saying, “I want to base my changes on what everybody has already done.”</font>
 
 ### Don't rebase public history
 
@@ -43,14 +41,14 @@ As we've discussed previously in [rewriting history](https://www.atlassian.com/g
 
 Git rebase interactive is when git rebase accepts an `-- i` argument. This stands for "Interactive." Without any arguments, the command runs in standard mode. In both cases, let's assume we have created a separate feature branch.
 
-```
+```bash
 # Create a feature branch based off of master 
 git checkout -b feature_branch master 
 # Edit files 
 git commit -a -m "Adds new feature" 
 ```
 
-Git rebase in standard mode will automatically take the commits in your current working branch and apply them to the head of the passed branch.
+<font color="red">Git rebase in standard mode will automatically take the commits in your current working branch and apply them to the head of the passed branch. 标准模式下的git rebase 会将当前分支应用到git rebase 参数指定的分支</font>
 
 ```
 git rebase <base>
@@ -70,7 +68,7 @@ git rebase --interactive <base>
 
 This rebases the current branch onto `<base>` but uses an interactive rebasing session. This opens an editor where you can enter commands (described below) for each commit to be rebased. These commands determine how individual commits will be transferred to the new base. You can also reorder the commit listing to change the order of the commits themselves. Once you've specified commands for each commit in the rebase, Git will begin playing back commits applying the rebase commands. The rebasing edit commands are as follows:
 
-```
+```bash
 pick 2231360 some old commit
 pick ee2adc2 Adds new feature
 
@@ -102,9 +100,9 @@ As detailed in the [rewriting history page](https://www.atlassian.com/git/tutori
 
 Interactive rebasing gives you complete control over what your project history looks like. This affords a lot of freedom to developers, as it lets them commit a "messy" history while they're focused on writing code, then go back and clean it up after the fact.
 
-Most developers like to use an interactive rebase to polish a feature branch before merging it into the main code base. This gives them the opportunity to squash insignificant commits, delete obsolete ones, and make sure everything else is in order before committing to the “official” project history. To everybody else, it will look like the entire feature was developed in a single series of well-planned commits.
+<font color="green">Most developers like to use an interactive rebase to polish a feature branch before merging it into the main code base. This gives them the opportunity to squash insignificant commits, delete obsolete ones, and make sure everything else is in order before committing to the “official” project history. To everybody else, it will look like the entire feature was developed in a single series of well-planned commits.</font>
 
-The real power of interactive rebasing can be seen in the history of the resulting master branch. To everybody else, it looks like you're a brilliant developer who implemented the new feature with the perfect amount of commits the first time around. This is how interactive rebasing can keep a project's history clean and meaningful.
+<font color="green">The real power of interactive rebasing can be seen in the history of the resulting master branch. To everybody else, it looks like you're a brilliant developer who implemented the new feature with the perfect amount of commits the first time around. This is how interactive rebasing can keep a project's history clean and meaningful.</font>
 
 ### Configuration options
 

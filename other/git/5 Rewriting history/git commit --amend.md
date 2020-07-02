@@ -24,7 +24,7 @@ git rebase, git reflog 用于改写提交历史
 
 <font color="red">The `git commit --amend` command is a convenient way to modify the most recent commit. It lets you combine staged changes with the previous commit instead of creating an entirely new commit. It can also be used to simply edit the previous commit message without changing its snapshot. But, amending does not just alter the most recent commit, it replaces it entirely, meaning the amended commit will be a new entity with its own ref. To Git, it will look like a brand new commit, which is visualized with an asterisk (*) in the diagram below. There are a few common scenarios for using `git commit --amend`. We'll cover usage examples in the following sections.</font>
 
-
+![image-20200702100003324](${img}/image-20200702100003324.png)
 
 ### Change most recent Git commit message(只更改已经提交的 提交备注)
 
@@ -62,7 +62,7 @@ Amended commits are actually entirely new commits and the previous commit will n
 
 To review, `git commit --amend` lets you take the most recent commit and add new staged changes to it. You can add or remove changes from the Git staging area to apply with a `--amend` commit. If there are no changes staged, a `--amend` will still prompt you to modify the last commit message log. Be cautious when using `--amend` on commits shared with other team members. Amending a commit that is shared with another user will potentially require confusing and lengthy merge conflict resolutions.
 
-## <font color="red">Changing older or multiple commits</font>
+## <font color="red">Changing older or multiple commits</font> (更改较早的或多个提交记录)
 
 <font color="red">To modify older or multiple commits, you can use `git rebase` to combine a sequence of commits into a new base commit. In standard mode, `git rebase` allows you to literally rewrite history — automatically applying commits in your current working branch to the passed branch head. Since your new commits will be replacing the old, it's important to not use `git rebase` on commits that have been pushed public, or it will appear that your project history disappeared.</font>
 
@@ -70,7 +70,7 @@ In these or similar instances where it's important to preserve a clean project h
 
 使用动机:
 
-合并多个commit为一个commit
+合并多个commit为一个新的commit
 
 #### Changing committed files
 
@@ -152,7 +152,7 @@ git reset --hard 0254ea7
 
 Using Git reset, it is now possible to change master back to the commit it was before. This provides a safety net in case the history was accidentally changed.
 
-It's important to note that the reflog only provides a safety net if changes have been committed to your local repository and that it only tracks movements of the repositories branch tip. Additionally reflog entries have an expiration date. The default expiration time for reflog entries is 90 days.
+<font color="red">It's important to note that the reflog only provides a safety net if changes have been committed to your local repository and that it only tracks movements of the repositories branch tip. Additionally reflog entries have an expiration date. The default expiration time for reflog entries is 90 days.</font>
 
 For additional information, see our `git reflog` page. 
 
