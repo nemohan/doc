@@ -1,14 +1,27 @@
 # git rm
 
+[TOC]
+
 https://www.atlassian.com/git/tutorials/undoing-changes/git-rm)
 
 
 
 <font color="red">A common question when getting started with Git is "How do I tell Git not to track a file (or files) any more?" The `git rm` command is used to remove files from a Git repository. It can be thought of as the inverse of the `git add` command.</font>
 
+
+
+git rm 相当于结合了先执行rm命令、再执行git add命令
+
+* 删除未被跟踪文件，直接从文件系统删除 完成
+* 删除已添加到stage index，但未提交过的文件
+* 删除已添加到stage index, 且提交过的文件
+* 删除已经跟踪且提交过且不在stage index的文件
+
 ## Git rm Overview
 
-The `git rm` command can be used to remove individual files or a collection of files. The primary function of `git rm` is to remove tracked files from the Git index. Additionally, `git rm` can be used to remove files from both the staging index and the working directory. There is no option to remove a file from only the working directory. The files being operated on must be identical to the files in the current `HEAD`. If there is a discrepancy between the `HEAD` version of a file and the staging index or working tree version, Git will block the removal. This block is a safety mechanism to prevent removal of in-progress changes.
+The `git rm` command can be used to remove individual files or a collection of files. The primary function of `git rm` is to remove tracked files from the Git index. Additionally, `git rm` can be used to remove files from both the staging index and the working directory. There is no option to remove a file from only the working directory.<font color="red"> The files being operated on must be identical to the files in the current `HEAD`. If there is a discrepancy between the `HEAD` version of a file and the staging index or working tree version, Git will block the removal. This block is a safety mechanism to prevent removal of in-progress changes.(怎么理解这句） 若文件x被提交过，即HEAD version。且文件x有改动（放入暂存区或未放入暂存区）。此时删除文件x, git 会提示并阻止删除</font>
+
+
 
 Note that `git rm` does not remove branches. Learn more about [using git branches](https://www.atlassian.com/git/tutorials/using-branches)
 
@@ -95,7 +108,7 @@ The `git rm` command operates on the current branch only. The removal event is o
 
 ## Why use git rm instead of rm
 
-A Git repository will recognize when a regular shell `rm` command has been executed on a file it is tracking. It will update the working directory to reflect the removal. It will not update the staging index with the removal. An additional `git add` command will have to be executed on the removed file paths to add the changes to the staging index. The `git rm` command acts a shortcut in that it will update the working directory and the staging index with the removal.
+<font color="red">A Git repository will recognize when a regular shell `rm` command has been executed on a file it is tracking. It will update the working directory to reflect the removal. It will not update the staging index with the removal. An additional `git add` command will have to be executed on the removed file paths to add the changes to the staging index. The `git rm` command acts a shortcut in that it will update the working directory and the staging index with the removal.</font>
 
 ## Examples
 
