@@ -1,5 +1,7 @@
 # git reflog
 
+[TOC]
+
 引用日志
 
 记录引用更改的日志,可以用来恢复丢失的commit记录
@@ -45,7 +47,7 @@ Visit the [Rewriting History page](https://www.atlassian.com/git/tutorials/rewri
 
 ### Reflog references
 
-By default, `git reflog` will output the reflog of the `HEAD` ref. `HEAD` is a symbolic reference to the currently active branch. Reflogs are available for other refs as well. The syntax to access a git ref is `name@{qualifier}`. In addition to `HEAD` refs, other branches, tags, remotes, and the Git stash can be referenced as well.
+<font color="red">By default, `git reflog` will output the reflog of the `HEAD` ref. `HEAD` is a symbolic reference to the currently active branch. Reflogs are available for other refs as well. The syntax to access a git ref is `name@{qualifier}`. In addition to `HEAD` refs, other branches, tags, remotes, and the Git stash can be referenced as well.</font>
 
 You can get a complete reflog of all refs by executing:
 
@@ -123,11 +125,9 @@ In addition, `git reflog show` is an alias for `git log -g --abbrev-commit --pre
 
 
 
-===============ignoer this======================
-
 ### Expire - `git reflog expire`
 
-The expire subcommand cleans up old or unreachable reflog entries. The `expire` subcommand has potential for data loss. This subcommand is not typically used by end users, but used by git internally. Passing a `-n` or `--dry-run` option to `git reflog expire` Will perform a "dry run" which will output which reflog entries are marked to be pruned, but will not actually prune them.
+<font color="green">The expire subcommand cleans up old or unreachable reflog entries. The `expire` subcommand has potential for data loss. This subcommand is not typically used by end users, but used by git internally. Passing a `-n` or `--dry-run` option to `git reflog expire` Will perform a "dry run" which will output which reflog entries are marked to be pruned, but will not actually prune them.</font>
 
 By default, the reflog expiration date is set to 90 days. An expire time can be specified by passing a command line argument `--expire=time` to `git reflog expire` or by setting a git configuration name of `gc.reflogExpire`.
 
@@ -161,7 +161,7 @@ git commit -am "some WIP changes"
 
 With the addition of the new commit. The log now looks like:
 
-```
+```bash
 37656e19d4e4f1a9b419f57850c8f1974f871b07 some WIP changes
 338fbcb41de10f7f2e54095f5649426cb4bf2458 extended content
 1e63ceab309da94256db8fb1f35b1678fb74abd4 bunch of content
@@ -173,7 +173,7 @@ bf871fd762d8ef2e146d7f0226e81a92f91975ad Add Git Reflog outline
 
 At this point we perform an interactive rebase against the master branch by executing...
 
-```
+```bash
 git rebase -i origin/master
 ```
 
@@ -188,7 +188,7 @@ Because we squashed commits the `git log` output now looks like:
 
 If we examine `git log` at this point it appears that we no longer have the commits that were marked for squashing. What if we want to operate on one of the squashed commits? Maybe to remove its changes from history? This is an opportunity to leverage the reflog.
 
-```
+```bash
 git reflog
 37656e1 HEAD@{0}: rebase -i (finish): returning to refs/heads/git_reflog
 37656e1 HEAD@{1}: rebase -i (start): checkout origin/master
