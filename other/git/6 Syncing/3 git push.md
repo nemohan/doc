@@ -1,5 +1,7 @@
 # git push
 
+[TOC]
+
 [git remote](https://www.atlassian.com/git/tutorials/syncing)[git fetch](https://www.atlassian.com/git/tutorials/syncing/git-fetch)[git push](https://www.atlassian.com/git/tutorials/syncing/git-push)[git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull)
 
 The `git push` command is used to upload local repository content to a remote repository. Pushing is how you transfer commits from your local repository to a remote repo. It's the counterpart to `git fetch`, but whereas fetching imports commits to local branches, pushing exports commits to remote branches. Remote branches are configured using the `git remote` command. Pushing has the potential to overwrite changes, caution should be taken when pushing. These issues are discussed below.
@@ -53,7 +55,7 @@ The `--force` flag overrides this behavior and makes the remote repository’s b
 
 ## Examples
 
-## Default git push
+### Default git push
 
 The following example describes one of the standard methods for publishing local contributions to the central repository. First, it makes sure your local master is up-to-date by fetching the central repository’s copy and rebasing your changes on top of them. The interactive rebase is also a good opportunity to clean up your commits before sharing them. Then, the `git push` command sends all of the commits on your local master to the central repository.
 
@@ -67,7 +69,7 @@ git push origin master
 
 Since we already made sure the local master was up-to-date, this should result in a fast-forward merge, and `git push` should not complain about any of the non-fast-forward issues discussed above.
 
-## Amended force push
+### Amended force push
 
 The `git commit` command accepts a `--amend` option which will update the previous commit. A commit is often amended to update the commit message or add new changes. Once a commit is amended a `git push` will fail because Git will see the amended commit and the remote commit as diverged content. The `--force` option must be used to push an amended commit.
 
@@ -84,7 +86,7 @@ The above example assumes it is being executed on an existing repository with a 
 
 Sometimes branches need to be cleaned up for book keeping or organizational purposes. The fully delete a branch, it must be deleted locally and also remotely.
 
-```
+```bash
 git branch -D branch_name
 git push origin :branch_name
 ```

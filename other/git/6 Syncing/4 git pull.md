@@ -1,12 +1,14 @@
 # git pull
 
+[TOC]
+
 [git remote](https://www.atlassian.com/git/tutorials/syncing)[git fetch](https://www.atlassian.com/git/tutorials/syncing/git-fetch)[git push](https://www.atlassian.com/git/tutorials/syncing/git-push)[git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull)
 
-The `git pull` command is used to fetch and download content from a remote repository and immediately update the local repository to match that content. Merging remote upstream changes into your local repository is a common task in Git-based collaboration work flows. The `git pull` command is actually a combination of two other commands, `git fetch` followed by `git merge`. In the first stage of operation `git pull` will execute a `git fetch` scoped to the local branch that `HEAD` is pointed at. Once the content is downloaded, `git pull` will enter a merge workflow. A new merge commit will be-created and `HEAD` updated to point at the new commit.
+The `git pull` command is used to fetch and download content from a remote repository and immediately update the local repository to match that content. Merging remote upstream changes into your local repository is a common task in Git-based collaboration work flows. <font color="red">The `git pull` command is actually a combination of two other commands, `git fetch` followed by `git merge`</font>. In the first stage of operation `git pull` will execute a `git fetch` scoped to the local branch that `HEAD` is pointed at. Once the content is downloaded, `git pull` will enter a merge workflow. A new merge commit will be-created and `HEAD` updated to point at the new commit.
 
 ## Git pull usage
 
-## How it works
+### How it works
 
 <font color="green">The `git pull` command first runs `git fetch` which downloads content from the specified remote repository. Then a `git merge` is executed to merge the remote content refs and heads into a new local merge commit. To better demonstrate the pull and merging process let us consider the following example. Assume we have a repository with a master branch and a remote origin.</font>
 
@@ -25,27 +27,27 @@ In the above diagram, we can see the new commit H. This commit is a new merge co
 ![1584933015747](./${img}\1584933015747.png)
 In this diagram, we can now see that a rebase pull does not create the new H commit. Instead, the rebase has copied the remote commits A--B--C and appended them to the local origin/master commit history.
 
-## Common Options
+### Common Options
 
 ```bash
-git pull <remote>
+git pull <remote> 
 ```
 
 <font color="green">Fetch the specified remote’s copy of the current branch and immediately merge it into the local copy. This is the same as `git fetch <remote>` followed by `git merge origin/<current-branch>`.</font>
 
 ```
-git pull --no-commit 
+git pull --no-commit <remote>
 ```
 
 Similar to the default invocation, fetches the remote content but does not create a new merge commit.
 
-```
-git pull --rebase 
+```bash
+git pull --rebase <remote>
 ```
 
 Same as the previous pull Instead of using `git merge` to integrate the remote branch with the local one, use `git rebase`.
 
-```
+```bash
 git pull --verbose
 ```
 
@@ -65,13 +67,13 @@ You can think of `git pull` as Git's version of `svn update`. It’s an easy way
 
 You start out thinking your repository is synchronized, but then `git fetch` reveals that origin's version of master has progressed since you last checked it. Then `git merge` immediately integrates the remote master into the local one.
 
-## Git pull and syncing
+### Git pull and syncing
 
 `git pull` is one of many commands that claim the responsibility of 'syncing' remote content. The `git remote` command is used to specify what remote endpoints the syncing commands will operate on. The `git push `command is used to upload content to a remote repository.
 
 The `git fetch` command can be confused with `git pull`. They are both used to download remote content. An important safety distinction can me made between `git pull` and `get fetch`. `git fetch` can be considered the "safe" option whereas, `git pull` can be considered unsafe. `git fetch` will download the remote content and not alter the state of the local repository. Alternatively, `git pull` will download remote content and immediately attempt to change the local state to match that content. This may unintentionally cause the local repository to get in a conflicted state.
 
-## <font color="green">Pulling via Rebase</font>
+### <font color="green">Pulling via Rebase</font>
 
 The `--rebase` option can be used to ensure a linear history by preventing unnecessary merge commits. Many developers prefer rebasing over merging, since it’s like saying, "I want to put my changes on top of what everybody else has done." In this sense, using `git pull` with the `--rebase` flag is even more like `svn update` than a plain `git pull`.
 
@@ -87,7 +89,7 @@ After running that command, all `git pull` commands will integrate via `git reba
 
 The following examples demonstrate how to use `git pull` in common scenarios:
 
-## Default Behavior
+### Default Behavior
 
 ```
 git pull
@@ -95,16 +97,16 @@ git pull
 
 Executing the default invocation of `git pull` will is equivalent to `git fetch origin HEAD` and `git merge HEAD` where `HEAD` is ref pointing to the current branch.
 
-## Git pull on remotes
+### Git pull on remotes
 
-```
+```bash
 git checkout new_feature
-git pull 
+git pull <remote repo>
 ```
 
 This example first performs a checkout and switches to the <newfeature> branch. Following that, the `git pull` is executed with <remote repo> being passed. This will implicitly pull down the newfeature branch from <remote repo>. Once the download is complete it will initiate a `git merge`.
 
-## Git pull rebase instead of merge
+### Git pull rebase instead of merge
 
 The following example demonstrates how to synchronize with the central repository's master branch using a rebase:
 
