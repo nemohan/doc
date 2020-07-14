@@ -1,5 +1,9 @@
 # Feature Branch Workflow
 
+[TOC]
+
+
+
 # Git Feature Branch Workflow
 
  
@@ -14,7 +18,7 @@ The Git Feature Branch Workflow is a composable workflow that can be leveraged b
 
 
 The Feature Branch Workflow assumes a central repository, and `master` represents the official project history. Instead of committing directly on their local `master` branch, developers create a new branch every time they start work on a new feature. Feature branches should have descriptive names, like animated-menu-items or issue-#1061. The idea is to give a clear, highly-focused purpose to each branch. Git makes no technical distinction between the `master` branch and feature branches, so developers can edit, stage, and commit changes to a feature branch.
- 
+
 
 In addition, feature branches can (and should) be pushed to the central repository. This makes it possible to share a feature with other developers without touching any official code. Since `master` is the only “special” branch, storing several feature branches on the central repository doesn’t pose any problems. Of course, this is also a convenient way to back up everybody’s local commits. The following is a walk-through of the life-cycle of a feature branch.
 

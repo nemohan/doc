@@ -2,6 +2,8 @@
 
  
 
+[TOC]
+
 Merging is Git's way of putting a forked history back together again. The `git merge` command lets you take the independent lines of development created by `git branch` and integrate them into a single branch.
 
 Note that all of the commands presented below merge into the current branch. The current branch will be updated to reflect the merge, but the target branch will be completely unaffected. Again, this means that `git merge` is often used in conjunction with `git checkout` for selecting the current branch and `git branch -d` for deleting the obsolete target branch.
@@ -22,15 +24,15 @@ Merge commits are unique against other commits in the fact that they have two pa
 
 Before performing a merge there are a couple of preparation steps to take to ensure the merge goes smoothly.
 
-## Confirm the receiving branch
+### Confirm the receiving branch
 
 Execute `git status `to ensure that `HEAD` is pointing to the correct merge-receiving branch. If needed, execute `git checkout <receiving>` to switch to the receiving branch. In our case we will execute `git checkout master.`
 
-## Fetch latest remote commits
+### Fetch latest remote commits
 
 Make sure the receiving branch and the merging branch are up-to-date with the latest remote changes. Execute `git fetch` to pull the latest remote commits. Once the fetch is completed ensure the `master` branch has the latest updates by executing `git pull.`
 
-## Merging
+### Merging
 
 Once the previously discussed "preparing to merge" steps have been taken a merge can be initiated by executing `git merge <branch name>` where `<branch name>` is the name of the branch that will be merged into the receiving branch.
 
@@ -82,7 +84,7 @@ This is a common workflow for short-lived topic branches that are used more as a
 
 Also note that Git should not complain about the `git branch -d`, since new-feature is now accessible from the master branch.
 
-<font color="red">In the event that you require a merge commit during a fast forward merge for record keeping purposes you can execute `git merge` with the `--no-ff`option.</font>
+<font color="red">In the event that you require a merge commit during a fast forward merge for record keeping purposes you can execute `git merge` with the `--no-ff`option.强制生成Merge commit</font>
 
 ```
 git merge --no-ff <branch>

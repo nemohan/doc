@@ -1,10 +1,14 @@
 # Centrailized workflow
 
+[TOC]
+
+
+
 # Comparing Workflows
 
  
 
-A Git Workflow is a recipe or recommendation for how to use Git to accomplish work in a consistent and productive manner. Git workflows encourage users to leverage Git effectively and consistently. Git offers a lot of flexibility in how users manage changes. Given Git's focus on flexibility, there is no standardized process on how to interact with Git. When working with a team on a Git managed project, it’s important to make sure the team is all in agreement on how the flow of changes will be applied. To ensure the team is on the same page, an agreed upon Git workflow should be developed or selected. There are several publicized Git workflows that may be a good fit for your team. Here, we’ll be discussing some of these workflow options.
+**A Git Workflow is a recipe or recommendation for how to use Git to accomplish work in a consistent and productive manner. Git workflows encourage users to leverage Git effectively and consistently. Git offers a lot of flexibility in how users manage changes. Given Git's focus on flexibility, there is no standardized process on how to interact with Git. When working with a team on a Git managed project, it’s important to make sure the team is all in agreement on how the flow of changes will be applied. To ensure the team is on the same page, an agreed upon Git workflow should be developed or selected. There are several publicized Git workflows that may be a good fit for your team. Here, we’ll be discussing some of these workflow options.**
 
 The array of possible workflows can make it hard to know where to begin when implementing Git in the workplace. This page provides a starting point by surveying the most common Git workflows for software teams.
 
@@ -35,6 +39,12 @@ Second, it gives you access to Git’s robust branching and merging model. Unlik
 Developers start by cloning the central repository. In their own local copies of the project, they edit files and commit changes as they would with SVN; however, these new commits are stored locally - they’re completely isolated from the central repository. This lets developers defer synchronizing upstream until they’re at a convenient break point.
 
 To publish changes to the official project, developers "push" their local `master` branch to the central repository. This is the equivalent of `svn commit`, except that it adds all of the local commits that aren’t already in the central `master` branch.
+
+![1594694202810](${img}/1594694202810.png)
+
+![1594694226578](${img}/1594694226578.png)
+
+
 
 ### Initialize the central repository
 
@@ -68,7 +78,7 @@ When you clone a repository, Git automatically adds a shortcut called `origin` t
 
 Once the repository is cloned locally, a developer can make changes using the standard Git commit process: edit, stage, and commit. If you’re not familiar with the staging area, it’s a way to prepare a commit without having to include every change in the working directory. This lets you create highly focused commits, even if you’ve made a lot of local changes.
 
-```
+```bash
 git status # View the state of the repo
 git add <some-file> # Stage a file
 git commit # Commit a file</some-file>
@@ -90,7 +100,7 @@ This command will push the new committed changes to the central repository. When
 
 The central repository represents the official project, so its commit history should be treated as sacred and immutable. If a developer’s local commits diverge from the central repository, Git will refuse to push their changes because this would overwrite official commits.
 
-
+![1594694272080](${img}/1594694272080.png)
 
 Before the developer can publish their feature, they need to fetch the updated central commits and rebase their changes on top of them. This is like saying, “I want to add my changes to what everyone else has already done.” The result is a perfectly linear history, just like in traditional SVN workflows.
 
@@ -102,7 +112,7 @@ Let’s take a general example at how a typical small team would collaborate usi
 
 ### John works on his feature
 
-
+![1594694304475](${img}/1594694304475.png)
 
 In his local repository, John can develop features using the standard Git commit process: edit, stage, and commit.
 
@@ -110,13 +120,13 @@ Remember that since these commands create local commits, John can repeat this pr
 
 ### Mary works on her feature
 
-
+![1594694326039](${img}/1594694326039.png)
 
 Meanwhile, Mary is working on her own feature in her own local repository using the same edit/stage/commit process. Like John, she doesn’t care what’s going on in the central repository, and she *really* doesn’t care what John is doing in his local repository, since all local repositories are *private*.
 
 ### John publishes his feature
 
-
+![1594694346664](${img}/1594694346664.png)
 
 Once John finishes his feature, he should publish his local commits to the central repository so other team members can access it. He can do this with the `git push` command, like so:
 
@@ -128,7 +138,7 @@ Remember that `origin` is the remote connection to the central repository that G
 
 ### Mary tries to publish her feature
 
-
+![1594694371511](${img}/1594694371511.png)
 
 Let’s see what happens if Mary tries to push her feature after John has successfully published his changes to the central repository. She can use the exact same push command:
 
@@ -150,7 +160,7 @@ This prevents Mary from overwriting official commits. She needs to pull John’s
 
 ### Mary rebases on top of John’s commit(s)
 
-
+![1594694444837](${img}/1594694444837.png)
 
 Mary can use `git pull` to incorporate upstream changes into her repository. This command is sort of like `svn update`—it pulls the entire upstream commit history into Mary’s local repository and tries to integrate it with her local commits:
 
@@ -160,13 +170,13 @@ git pull --rebase origin master
 
 The `--rebase` option tells Git to move all of Mary’s commits to the tip of the `master` branch after synchronising it with the changes from the central repository, as shown below:
 
-
+![1594694463857](${img}/1594694463857.png)
 
 The pull would still work if you forgot this option, but you would wind up with a superfluous “merge commit” every time someone needed to synchronize with the central repository. For this workflow, it’s always better to rebase instead of generating a merge commit.
 
 ### Mary resolves a merge conflict
 
-
+![1594694484327](${img}/1594694484327.png)
 
 Rebasing works by transferring each local commit to the updated `master` branch one at a time. This means that you catch merge conflicts on a commit-by-commit basis rather than resolving all of them in one massive merge commit. This keeps your commits as focused as possible and makes for a clean project history. In turn, this makes it much easier to figure out where bugs were introduced and, if necessary, to roll back changes with minimal impact on the project.
 
@@ -176,7 +186,7 @@ If Mary and John are working on unrelated features, it’s unlikely that the reb
 CONFLICT (content): Merge conflict in <some-file>
 ```
 
-
+![1594694513930](${img}/1594694513930.png)
 
 The great thing about Git is that *anyone* can resolve their own merge conflicts. In our example, Mary would simply run a `git status` to see where the problem is. Conflicted files will appear in the Unmerged paths section:
 
@@ -205,7 +215,7 @@ git rebase --abort
 
 ### Mary successfully publishes her feature
 
-
+![1594694542279](${img}/1594694542279.png)
 
 After she’s done synchronizing with the central repository, Mary will be able to publish her changes successfully:
 
@@ -223,7 +233,7 @@ The Centralized Workflow is great for small teams. The conflict resolution proce
 
 The Centralized Workflow is essentially a building block for other Git workflows. Most popular Git workflows will have some sort of centralized repo that individual developers will push and pull from. Below we will briefly discuss some other popular Git workflows. These extended workflows offer more specialized patterns in regard to managing branches for feature development, hot fixes, and eventual release.
 
-## Feature branching
+### Feature branching
 
 Feature Branching is a logical extension of Centralized Workflow. The core idea behind the [Feature Branch Workflow](http://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow) is that all feature development should take place in a dedicated branch instead of the `master` branch. This encapsulation makes it easy for multiple developers to work on a particular feature without disturbing the main codebase. It also means the `master` branch should never contain broken code, which is a huge advantage for continuous integration environments. 
 
