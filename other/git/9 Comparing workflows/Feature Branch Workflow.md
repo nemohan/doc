@@ -9,7 +9,8 @@
 * 特性分支
 * develop 测试分支
 * master 分支
-* 每次从master创建新分支。新分支完成后先合并到develop分支，进行测试。新分支开发期间若需要之前的一些分支开发的功能（但未合并到master分支），应合并之前的分支
+* 每次从master创建特性分支。新分支完成后先合并到develop分支，进行测试。新分支开发期间若需要之前的一些分支开发的功能（但未合并到master分支），应合并之前的分支
+* 特性分支完成后，合并到master分支。删除特性分支
 
 The core idea behind the Feature Branch Workflow is that all feature development should take place in a dedicated branch instead of the `master` branch. This encapsulation makes it easy for multiple developers to work on a particular feature without disturbing the main codebase. It also means the `master` branch will never contain broken code, which is a huge advantage for continuous integration environments.
 
