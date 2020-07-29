@@ -14,7 +14,7 @@ Gitflow is really just an abstract idea of a Git workflow. This means it dictate
 
 ## How it works
 
-
+![image-20200721100435736](${img}/image-20200721100435736.png)
 
 ### Develop and Master Branches
 
@@ -54,11 +54,11 @@ $ git branch
  master
 ```
 
-## Feature Branches
+### Feature Branches
 
-Each new feature should reside in its own branch, which can be[pushed to the central repository](https://www.atlassian.com/git/tutorials/syncing/git-push) for backup/collaboration. But, instead of branching off of `master`, `feature` branches use `develop` as their parent branch. When a feature is complete, it gets [merged back into develop](https://www.atlassian.com/git/tutorials/using-branches/git-merge). Features should never interact directly with `master`.
+<font color="red">Each new feature should reside in its own branch, which can be[pushed to the central repository](https://www.atlassian.com/git/tutorials/syncing/git-push) for backup/collaboration. But, instead of branching off of `master`, `feature` branches use `develop` as their parent branch. When a feature is complete, it gets [merged back into develop](https://www.atlassian.com/git/tutorials/using-branches/git-merge). Features should never interact directly with `master`.</font>
 
-
+![image-20200721100507993](${img}/image-20200721100507993.png)
 
 Note that `feature` branches combined with the `develop` branch is, for all intents and purposes, the Feature Branch Workflow. But, the Gitflow Workflow doesn’t stop there.
 
@@ -68,14 +68,14 @@ Note that `feature` branches combined with the `develop` branch is, for all inte
 
 Without the git-flow extensions:
 
-```
+```bash
 git checkout develop
 git checkout -b feature_branch
 ```
 
 When using the git-flow extension:
 
-```
+```bash
 git flow feature start feature_branch
 ```
 
@@ -98,11 +98,11 @@ Using the git-flow extensions:
 git flow feature finish feature_branch
 ```
 
-## Release Branches
+### Release Branches
 
+![image-20200721100742195](${img}/image-20200721100742195.png)
 
-
-Once `develop` has acquired enough features for a release (or a predetermined release date is approaching), you fork a `release`branch off of `develop`. Creating this branch starts the next release cycle, so no new features can be added after this point—only bug fixes, documentation generation, and other release-oriented tasks should go in this branch. Once it's ready to ship, the `release`branch gets merged into `master` and tagged with a version number. In addition, it should be merged back into `develop`, which may have progressed since the release was initiated.
+<font color="red">Once `develop` has acquired enough features for a release (or a predetermined release date is approaching), you fork a `release`branch off of `develop`. Creating this branch starts the next release cycle, so no new features can be added after this point—only bug fixes, documentation generation, and other release-oriented tasks should go in this branch. Once it's ready to ship, the `release`branch gets merged into `master` and tagged with a version number. In addition, it should be merged back into `develop`, which may have progressed since the release was initiated.</font>
 
 Using a dedicated branch to prepare releases makes it possible for one team to polish the current release while another team continues working on features for the next release. It also creates well-defined phases of development (e.g., it's easy to say, “This week we're preparing for version 4.0,” and to actually see it in the structure of the repository).
 
@@ -139,9 +139,9 @@ Or with the git-flow extension:
 git flow release finish '0.1.0'
 ```
 
-## Hotfix Branches
+### Hotfix Branches
 
-
+![image-20200721101027423](${img}/image-20200721101027423.png)
 
 Maintenance or `“hotfix”` branches are used to quickly patch production releases. `Hotfix` branches are a lot like `release`branches and `feature` branches except they're based on `master`instead of `develop`. This is the only branch that should fork directly off of `master`. As soon as the fix is complete, it should be merged into both `master` and `develop` (or the current `release`branch), and `master` should be tagged with an updated version number.
 
@@ -162,11 +162,13 @@ $ git flow hotfix start hotfix_branch
 
 Similar to finishing a `release` branch, a `hotfix` branch gets merged into both `master` and `develop.`
 
-```
+```bash
 git checkout master
 git merge hotfix_branch
+
 git checkout develop
 git merge hotfix_branch
+
 git branch -D hotfix_branch
 $ git flow hotfix finish hotfix_branch
 ```
@@ -175,7 +177,7 @@ $ git flow hotfix finish hotfix_branch
 
 A complete example demonstrating a Feature Branch Flow is as follows. Assuming we have a repo setup with a `master` branch.
 
-```
+```bash
 git checkout master
 git checkout -b develop
 git checkout -b feature_branch
@@ -189,7 +191,7 @@ git branch -d feature_branch
 
 In addition to the `feature` and `release` flow, a `hotfix` example is as follows:
 
-```
+```bash
 git checkout master
 git checkout -b hotfix_branch
 # work is done commits are added to the hotfix_branch
