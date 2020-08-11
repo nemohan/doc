@@ -129,7 +129,7 @@ kubectl get rc 										# rc列表
 kubectl create -f kubia-rc.yaml						#根据rc描述文件，创建rc
 kubectl delete rs <rs-name> 						# 删除replicaSet
 
-kubectl get dc										#dc列表
+kubectl get ds										#ds列表
 kubectl get job										# job列表
 
 ~~~
