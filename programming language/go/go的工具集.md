@@ -178,7 +178,18 @@ go install 命令编译并安装指定的包
 
 
 
+### GOPATH 环境变量
 
+构建时会搜索GOPATH中列出的目录。新下载的包总是在第一个目录中
+
+
+
+### vendor 目录
+
+* 位于vendor目录下的包可能会隐藏在更高层目录下的包
+
+* 位于vendor目录下的包不遵循 `import path checking`
+* go get 下载的包不会自动放入vendor目录中
 
 ### go mod
 
@@ -205,7 +216,7 @@ why         explain why packages or modules are needed
 
 ##### GOPATH and Modules
 
-当使用modules时，GOPATH不再用来解析package包的路径
+当使用modules时，GOPATH不再作为搜索依赖包的路径。不过新下载的包依然会放在GOPATH/pkg/mod 目录下
 
 
 
@@ -239,21 +250,31 @@ A module is defined by a tree of Go source files with a go.mod file in the tree'
 
 
 
-##### main module
+##### 主模块(main module)
 
-The "main module" is the module containing the directory where the go command is run. The go command finds the module root by looking for a go.mod in the current directory, or else the current directory's parent directory, or else the parent's parent directory, and so on.
-
-The main module's go.mod file defines the precise set of packages available for use by the go command, through require, replace, and exclude statements. Dependency modules, found by following require statements, also contribute to the definition of that set of packages, but only through their go.mod files' require statements: any replace and exclude statements in dependency modules are ignored. The replace and exclude statements therefore allow the main module complete control over its own build, without also being subject to complete control by dependencies.
-
-The set of modules providing packages to builds is called the "build list". The build list initially contains only the main module. Then the go command adds to the list the exact module versions required by modules already on the list, recursively, until there is nothing left to add to the list. If multiple versions of a particular module are added to the list, then at the end only the latest version (according to semantic version ordering) is kept for use in the build.
-
-The 'go list' command provides information about the main module and the build list. For example:
+主模块即包含运行go命令时所在的目录的模块，go 命令通过在当前目录或当前目录的父目录(直到找到go.mod)查找go.mod文件确定模块的根
 
 ```
 go list -m              # print path of main module
 go list -m -f={{.Dir}}  # print root directory of main module
 go list -m all          # print build list
 ```
+
+
+
+##### 维护模块依赖
+
+通常go 命令会自动添加依赖模块到go.mod中
+
+##### modules and vendoring
+
+* 使用模块时，go 命令通常去依赖所在的仓库去下载依赖模块。
+
+* 下载就会导致编译时间过长, 可以使用go mod vendor 命令将依赖放到vendor下。为了和go.mod保持一致，`go mod vendor` 应该在go.mod被更新之后运行
+* 若在`main module`的根目录下存在vendor目录，并且`main module`的go.mod文件中指定的go版本高于1.14。构建命令如`go build`或`go test`会在vendor中寻找依赖，而不是去通过网络下载或本地的模块缓存中查找。可以使用`-mod=vendor`选项指示开启显示使用vendor或`-mod=mod`来禁用vendor
+* 
+
+##### 使用go.sum校验go.mod是否有改变
 
 ##### 疑问
 
