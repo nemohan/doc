@@ -20,7 +20,6 @@
 
 * **io 逻辑读取次数(参数:slow_query_type 及long_query_io), 在mysql 5.6.45 未找到这两个参数,在innoSQL中有**
 
-  
 
 
 
@@ -66,6 +65,10 @@ show variables like "log_output" //FILE TABLE
 ~~~
 
 
+
+##### 注意
+
+long_query_time 既是全局变量也是当前会话变量
 
 ### 二进制日志
 
