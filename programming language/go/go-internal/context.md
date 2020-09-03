@@ -1,14 +1,12 @@
 # context
 
+[TOC]
 
+### 理解
 
-context的使用场景一直困惑着我
+个人理解context 就是协程之间管理的一种沟通机制，使用context可以
 
-假设如下的场景：
-
-rpc 如何使用context ,在等待resp时
-
-
+WithCancel和WithTimeout的区别就是一个手动调用cancel,一个通过j既可以通过定时器触发自动调用cancel也可手动调用cancel
 
 ### 正确的姿势
 
@@ -112,6 +110,17 @@ func TODO() Context {
 type CancelFunc func()
 
 
+
+~~~
+
+
+
+### WithTimeout / WithDeadline
+
+* WithTimeout 其实也是通过WithDeadline实现
+* WithDeadline通过使用timer(定时器)来触发cancelCtx.cancel函数
+
+~~~go
 // 假设 WithTimeout(context.Background(), time.second)
 //创建context之后，如何使用它呢
 
@@ -141,10 +150,11 @@ func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc) {
 //
 // Canceling this context releases resources associated with it, so code should
 // call cancel as soon as the operations running in this Context complete.
-//假设parent 是 background
+
 
 func WithDeadline(parent Context, deadline time.Time) (Context, CancelFunc) {
-    // ok 是false
+    //若parent为空，则ok为false, cur 为nil
+    //若parent 或parent 是cancelCtx, ok也是false
 	if cur, ok := parent.Deadline(); ok && cur.Before(deadline) {
 		// The current deadline is already sooner than the new one.
 		return WithCancel(parent)
@@ -157,7 +167,7 @@ func WithDeadline(parent Context, deadline time.Time) (Context, CancelFunc) {
 	}
 	propagateCancel(parent, c)
 	d := time.Until(deadline)
-    //是否已经到了截至时间
+    //是否已经到了截止时间
 	if d <= 0 {
 		c.cancel(true, DeadlineExceeded) // deadline has already passed
 		return c, func() { c.cancel(true, Canceled) }
@@ -175,41 +185,28 @@ func WithDeadline(parent Context, deadline time.Time) (Context, CancelFunc) {
 }
 
 
-// propagateCancel arranges for child to be canceled when parent is.
-func propagateCancel(parent Context, child canceler) {
-    //parent是emptyContext情况下，满足
-	if parent.Done() == nil {
-		return // parent is never canceled
-	}
-	if p, ok := parentCancelCtx(parent); ok {
-		p.mu.Lock()
-		if p.err != nil {
-			// parent has already been canceled
-			child.cancel(false, p.err)
-		} else {
-			if p.children == nil {
-				p.children = make(map[canceler]struct{})
-			}
-			p.children[child] = struct{}{}
-		}
-		p.mu.Unlock()
-	} else {
-		go func() {
-			select {
-			case <-parent.Done():
-				child.cancel(false, parent.Err())
-			case <-child.Done():
-			}
-		}()
-	}
-}
+
 ~~~
 
 
 
-### cancelCtx
+### WithCancel
+
+* 使用WithCancel 创建的context被取消(调用cancel)时，其`子context`也会被取消并解除`父子关系`,但是`子context`的`子context`之间不会解除父子关系。
 
 ~~~go
+// WithCancel returns a copy of parent with a new Done channel. The returned
+// context's Done channel is closed when the returned cancel function is called
+// or when the parent context's Done channel is closed, whichever happens first.
+//
+// Canceling this context releases resources associated with it, so code should
+// call cancel as soon as the operations running in this Context complete.
+func WithCancel(parent Context) (ctx Context, cancel CancelFunc) {
+	c := newCancelCtx(parent)
+	propagateCancel(parent, &c)
+	return &c, func() { c.cancel(true, Canceled) }
+}
+
 // newCancelCtx returns an initialized cancelCtx.
 func newCancelCtx(parent Context) cancelCtx {
 	return cancelCtx{
@@ -245,12 +242,69 @@ func (c *cancelCtx) String() string {
 	return fmt.Sprintf("%v.WithCancel", c.Context)
 }
 
+
+
+~~~
+
+
+
+##### propagateCancel 关联`父context`和`子context`
+
+~~~go
+// A canceler is a context type that can be canceled directly. The
+// implementations are *cancelCtx and *timerCtx.
+type canceler interface {
+	cancel(removeFromParent bool, err error)
+	Done() <-chan struct{}
+}
+
+// propagateCancel arranges for child to be canceled when parent is.
+func propagateCancel(parent Context, child canceler) {
+    //parent是emptyContext情况下，满足
+	if parent.Done() == nil {
+		return // parent is never canceled
+	}
+	if p, ok := parentCancelCtx(parent); ok {
+		p.mu.Lock()
+		if p.err != nil {
+			// parent has already been canceled
+			child.cancel(false, p.err)
+		} else {
+			if p.children == nil {
+				p.children = make(map[canceler]struct{})
+			}
+			p.children[child] = struct{}{}
+		}
+		p.mu.Unlock()
+	} else {
+		go func() {
+			select {
+			case <-parent.Done():
+				child.cancel(false, parent.Err())
+			case <-child.Done():
+			}
+		}()
+	}
+}
+~~~
+
+
+
+
+
+##### cancelCtx.cancel 关闭c.done channel
+
+* 关闭c.done channel的同时，关闭子context的channel
+* 若已经调用了cancel, 并不会导致重复关闭c.done。因为第一次调用时会设置c.err
+
+~~~go
 // cancel closes c.done, cancels each of c's children, and, if
 // removeFromParent is true, removes c from its parent's children.
 func (c *cancelCtx) cancel(removeFromParent bool, err error) {
 	if err == nil {
 		panic("context: internal error: missing cancel error")
 	}
+    //已经cancel的c.err 必不为空
 	c.mu.Lock()
 	if c.err != nil {
 		c.mu.Unlock()
@@ -270,6 +324,5 @@ func (c *cancelCtx) cancel(removeFromParent bool, err error) {
 		removeChild(c.Context, c)
 	}
 }
-
 ~~~
 
