@@ -8,6 +8,65 @@ Go has included support for versioned modules as proposed [here](https://golang.
 
 In [Go 1.14](https://golang.org/doc/go1.14), module support is considered ready for production use, and all users are encouraged to migrate to modules from other dependency management systems. If you are unable to migrate due to a problem in the Go toolchain, please ensure that the problem has an [open issue](https://github.com/golang/go/wiki/Modules#github-issues) filed. (If the issue is not on the Go1.15 milestone, please comment on why it prevents you from migrating so it can be prioritized appropriately). You can also provide an [experience report](https://github.com/golang/go/wiki/ExperienceReports) for more detailed feedback.
 
+
+
+### 总结
+
+我现在的项目结构如下图，在app目录下先执行go mod init 创建go.mod文件。
+
+~~~
+muying.com
+|-- muying  本地的公共包
+|   `-- bar.go
+|-- app
+|   `-- main.go
+|   `-- vendor
+|   `-- go.mod
+
+~~~
+
+下面是执行go mod init的输出，可以看出go mod根据vendor.json来构建go.mod文件。从下面的输出可以看出两个问题
+
+1.  muying.com/muying是本地的公共包，go mod 却尝试从网络获取
+2. 其他的包，已经在vendor下面，为何也要从网络获取
+
+
+
+怎么解决上面两个问题呢, 不解决上面两个问题，在构建过程中还是会遇到
+
+~~~
+go: creating new go.mod: module muying.com/app
+go: copying requirements from vendor\vendor.json
+go: converting vendor\vendor.json: stat muying.com/muying/common/redisdb@3ddd32d8a77d8a3d871caae5a496ed1b9a3f9933: unrecognized import path "muying.com/muying/common/redisdb" (https fetch: Get https://muying.com/muying/common/redisdb?go-get=1: dial tcp 98.126.141.226:443: connectex: No connection could be made because the target machine actively refused it.)
+
+go: converting vendor\vendor.json: stat google.golang.org/protobuf/types/known/fieldmaskpb@16365ed3d8cfe6a4797229f0b1b7588d0259755b: unrecognized import path "google.golang.org/protobuf/types/known/fieldmaskpb" (https fetch: Get https://google.golang.org/protobuf/types/known/fieldmaskpb?go-get=1: dial tcp 216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.)
+
+go: converting vendor\vendor.json: stat google.golang.org/protobuf/internal/filetype@16365ed3d8cfe6a4797229f0b1b7588d0259755b: unrecognized import path "google.golang.org/protobuf/internal/filetype" (https fetch: Get https://google.golang.org/protobuf/internal/filetype?go-get=1: dial tcp 216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has 
+failed to respond.)
+
+go: converting vendor\vendor.json: stat google.golang.org/protobuf/internal/protolegacy@16365ed3d8cfe6a4797229f0b1b7588d0259755b: unrecognized import path "google.golang.org/protobuf/internal/protolegacy" (https fetch: Get https://google.golang.org/protobuf/internal/protolegacy?go-get=1: dial tcp 216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected 
+host has failed to respond.)
+go: converting vendor\vendor.json: stat google.golang.org/protobuf/internal/testprotos/required@16365ed3d8cfe6a4797229f0b1b7588d0259755b: unrecognized import path "google.golang.org/protobuf/internal/testprotos/required" (https fetch: Get https://google.golang.org/protobuf/internal/testprotos/required?go-get=1: dial tcp 
+216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.)
+go: converting vendor\vendor.json: stat google.golang.org/protobuf/encoding/protowire@16365ed3d8cfe6a4797229f0b1b7588d0259755b: unrecognized import path "google.golang.org/protobuf/encoding/protowire" (https fetch: Get https://google.golang.org/protobuf/encoding/protowire?go-get=1: dial tcp 216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.)
+go: converting vendor\vendor.json: stat golang.org/x/text/internal/testtext@929e72ca90deac4784bbe451caf10faa5b256ebe: unrecognized import path "golang.org/x/text/internal/testtext" (https fetch: Get https://golang.org/x/text/internal/testtext?go-get=1: dial tcp 216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.)        
+go: converting vendor\vendor.json: stat golang.org/x/sys/internal/unsafeheader@c12d262b63d83031f2db2f528267f9a4f58e2775: unrecognized import path "golang.org/x/sys/internal/unsafeheader" (https fetch: Get https://golang.org/x/sys/internal/unsafeheader?go-get=1: dial tcp 216.239.37.1:443: connectex: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.)
+~~~
+
+
+
+一种方法:
+
+删除vendor目录，然后执行go mod init。这时仍然会遇到上面的第一个问题，通过添加以下指示可以解决第一个问题。至于第二个问题可能仍然存在，但不影响编译
+
+~~~
+replace muying.com/muying => ../muying 
+~~~
+
+##### 构建
+
+在go.mod和vendor 目录同时存在时，使用go build 构建需要指定-mod参数(应该是指定module从哪获取)。若指定了-mod=vendor，还需执行go mod vendor命令。该命令在vendor目录下创建一个modules.txt文件
+
 ## Recent Changes
 
 ### Go 1.14
@@ -25,45 +84,16 @@ See the [Go 1.14 release notes](https://golang.org/doc/go1.14#go-command) for de
 
 See the [Go 1.13 release notes](https://golang.org/doc/go1.13#modules) for details.
 
-- The
-
-   
-
-  ```
-  go
-  ```
-
-   
-
-  tool now defaults to downloading modules from the public Go module mirror at
-
-   
-
-  https://proxy.golang.org
-
-  , and also defaults to validating downloaded modules (regardless of source) against the public Go checksum database at
-
-   
-
-  https://sum.golang.org
-
-  .
+- The `go`tool now defaults to downloading modules from the public Go module mirror at https://proxy.golang.org, and also defaults to validating downloaded modules (regardless of source) against the public Go checksum database at https://sum.golang.org
 
   - If you have private code, you most likely should configure the `GOPRIVATE` setting (such as `go env -w GOPRIVATE=*.corp.com,github.com/secret/repo`), or the more fine-grained variants `GONOPROXY` or `GONOSUMDB` that support less frequent use cases. See the [documentation](https://golang.org/cmd/go/#hdr-Module_configuration_for_non_public_modules) for more details.
 
 - `GO111MODULE=auto` enables module-mode if any go.mod is found, even inside GOPATH. (Prior to Go 1.13, `GO111MODULE=auto` would never enable module-mode inside GOPATH).
 
-- ```
-  go get
-  ```
-
-   
-
-  arguments have changed:
-
+- `go get `arguments have changed:
   - `go get -u` (without any arguments) now only upgrades the direct and indirect dependencies of your current *package*, and no longer examines your entire *module*.
   - `go get -u ./...` from your module root upgrades all the direct and indirect dependencies of your module, and now excludes test dependencies.
-  - `go get -u -t ./...` is similar, but also upgrades test dependencies.
+- `go get -u -t ./...` is similar, but also upgrades test dependencies.
   - `go get` no longer supports `-m` (because it would have largely overlapped with `go get -d`due to other changes; you can usually replace `go get -m foo` with `go get -d foo`).
 
 ## Table of Contents
@@ -137,6 +167,10 @@ The "Quick Start" and "New Concepts" sections are particularly important for som
   - [Why does 'go build' require gcc, and why are prebuilt packages such as net/http not used?](https://github.com/golang/go/wiki/Modules#why-does-go-build-require-gcc-and-why-are-prebuilt-packages-such-as-nethttp-not-used)
   - [Do modules work with relative imports like `import "./subdir"`?](https://github.com/golang/go/wiki/Modules#do-modules-work-with-relative-imports-like-import-subdir)
   - [Some needed files may not be present in populated vendor directory](https://github.com/golang/go/wiki/Modules#some-needed-files-may-not-be-present-in-populated-vendor-directory)
+
+
+
+
 
 ## Quick Start
 
@@ -229,7 +263,7 @@ These sections provide a high-level introduction to the main new concepts. For m
 
 Modules record precise dependency requirements and create reproducible builds.
 
-Most often, a version control repository contains exactly one module defined in the repository root. ([Multiple modules are supported in a single repository](https://github.com/golang/go/wiki/Modules#faqs--multi-module-repositories), but typically that would result in more work on an on-going basis than a single module per repository).
+<font color="red">Most often, a version control repository contains exactly one module defined in the repository root. ([Multiple modules are supported in a single repository](https://github.com/golang/go/wiki/Modules#faqs--multi-module-repositories), but typically that would result in more work on an on-going basis than a single module per repository).</font>
 
 Summarizing the relationship between repositories, modules, and packages:
 
@@ -241,7 +275,7 @@ Modules must be semantically versioned according to [semver](https://semver.org/
 
 ### go.mod
 
-A module is defined by a tree of Go source files with a `go.mod` file in the tree's root directory. Module source code may be located outside of GOPATH. There are four directives: `module`, `require`, `replace`, `exclude`.
+<font color="green">A module is defined by a tree of Go source files with a `go.mod` file in the tree's root directory. Module source code may be located outside of GOPATH. There are four directives: `module`, `require`, `replace`, `exclude`.</font>
 
 Here is an example `go.mod` file defining the module `github.com/my/thing`:
 
@@ -279,9 +313,11 @@ This imports package `bar` from the module `github.com/user/mymod`.
 
 ### Version Selection
 
-最小版本选择，怎么看着是最大版本选择?
-
 <font color="red">If you add a new import to your source code that is not yet covered by a `require` in `go.mod`, most go commands like 'go build' and 'go test' will automatically look up the proper module and add the *highest* version of that new direct dependency to your module's `go.mod` as a `require` directive.</font> For example, if your new import corresponds to dependency M whose latest tagged release version is `v1.2.3`, your module's `go.mod` will end up with `require M v1.2.3`, which indicates module M is a dependency with allowed version >= v1.2.3 (and < v2, given v2 is considered incompatible with v1).</font>
+
+
+
+minimal version selection algorithm 用于在构建过程中选择module的版本，在构建过程中，针对每一个模块，版本选择算法都会根据main module或其依赖列出的模块版本来确定最终使用的模块的最高版本(保持向后兼容的最高版本，即主版本号一致)。
 
 The *minimal version selection* algorithm is used to select the versions of all modules used in a build. For each module in a build, the version selected by minimal version selection is always the semantically *highest* of the versions explicitly listed by a `require` directive in the main module or one of its dependencies.
 
@@ -302,8 +338,12 @@ For many years, the official Go FAQ has included this advice on package versioni
 The last sentence is especially important — if you break compatibility, you should change the import path of your package. With Go 1.11 modules, that advice is formalized into the *import compatibility rule*:
 
 > "If an old package and a new package have the same import path, the new package must be backwards compatible with the old package."
+>
+> 若旧版本的包和新版本的包有同样的导入路径，新包应该向后兼容旧版本的包
 
-Recall [semver](https://semver.org/) requires a major version change when a v1 or higher package makes a backwards-incompatible change. The result of following both the import compatibility rule and semver is called *Semantic Import Versioning*, where the major version is included in the import path — this ensures the import path changes any time the major version increments due to a compatibility break.
+<font color="green">Recall [semver](https://semver.org/) requires a major version change when a v1 or higher package makes a backwards-incompatible change. The result of following both the import compatibility rule and semver is called *Semantic Import Versioning*, where the major version is included in the import path — this ensures the import path changes any time the major version increments due to a compatibility break.</font>
+
+导入版本的语义:  为了同时遵循go 给出的包导入路径建议和sermver规则，在包导入路径中加入主版本号。这样，主版本号没有改变即包依旧向后兼容同时导入路径也相同。若主版本号发生改变则导入路径也发生了改变。
 
 As a result of Semantic Import Versioning, code opting in to Go modules **must comply with these rules**:
 
@@ -353,7 +393,7 @@ To create a `go.mod` for an existing project:
 
 1. Navigate to the root of the module's source tree outside of GOPATH:
 
-   ```
+   ```bash
    $ cd <project path outside $GOPATH/src>         # e.g., cd ~/projects/hello
    ```
 
@@ -441,9 +481,9 @@ To upgrade to the latest version for all direct and indirect dependencies of the
 
 `go get foo` updates to the latest version of `foo`. `go get foo` is equivalent to `go get foo@latest` — in other words, `@latest` is the default if no `@` version is specified.
 
-In this section, "latest" is the latest version with a [semver](https://semver.org/) tag, or the latest known commit if there are no semver tags. Prerelease tags are not selected as "latest" unless there are no other semver tags on the repository ([details](https://golang.org/cmd/go/#hdr-Module_aware_go_get)).
+<font color="red">In this section, "latest" is the latest version with a [semver](https://semver.org/) tag, or the latest known commit if there are no semver tags. Prerelease tags are not selected as "latest" unless there are no other semver tags on the repository ([details](https://golang.org/cmd/go/#hdr-Module_aware_go_get)).</font>
 
-A common mistake is thinking `go get -u foo` solely gets the latest version of `foo`. In actuality, the `-u` in `go get -u foo` or `go get -u foo@latest` means to *also* get the latest versions for *all* of the direct and indirect dependencies of `foo`. A common starting point when upgrading `foo` is instead to do `go get foo` or `go get foo@latest` without a `-u` (and after things are working, consider `go get -u=patch foo`, `go get -u=patch`, `go get -u foo`, or `go get -u`).
+<font color="red">A common mistake is thinking `go get -u foo` solely gets the latest version of `foo`. In actuality, the `-u` in `go get -u foo` or `go get -u foo@latest` means to *also* get the latest versions for *all* of the direct and indirect dependencies of `foo`. A common starting point when upgrading `foo` is instead to do `go get foo` or `go get foo@latest` without a `-u` (and after things are working, consider `go get -u=patch foo`, `go get -u=patch`, `go get -u foo`, or `go get -u`).</font>
 
 To upgrade or downgrade to a more specific version, 'go get' allows version selection to be overridden by adding an @version suffix or ["module query"](https://golang.org/cmd/go/#hdr-Module_queries) to the package argument, such as `go get foo@v1.6.2`, `go get foo@e3702bed2`, or `go get foo@'<v1.6.2'`.
 
@@ -461,7 +501,11 @@ After upgrading or downgrading any dependencies, you may then want to run the te
 $ go test all
 ```
 
-## How to Prepare for a Release
+
+
+2020-9-10 上半部分读完
+
+## How to Prepare for a Release 
 
 ### Releasing Modules (All Versions)
 
