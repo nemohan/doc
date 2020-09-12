@@ -1,4 +1,4 @@
-# map 的实现
+# 1map 的实现
 
 [TOC]
 
@@ -181,10 +181,11 @@ mapassign 会返回待插入value的内存位置
 
 bucket 的结构： hash(key)| hash(key2) | key| key2 | value| value2
 
-* 设置hashWriting标志位
-* 2 检查是否正在重新哈希
-* 3 查找空闲槽位。找到后仍然需要遍历所有的bmap，以确当是否有重复的key
-* 4 若当前未正在调整哈希表， 且根据当前的loadFactor确定是否需要调整哈希表的大小
+* 1检测hashWriting标志位是否被设置，若设置则panic(并发写)。否则设置hashWriting标志位
+* 2 计算key的哈希值，并确定其将要存储的bucket
+* 3 检查是否正在重新哈希,若正在rehash。则将bucket从旧的哈希表迁移到新哈希表
+* 4 查找空闲槽位。找到后仍然需要遍历所有的bmap，以确当是否有重复的key
+* 5 若当前未正在调整哈希表， 且根据当前的loadFactor确定是否需要调整哈希表的大小
 * 若需要进行rehash,则跳到步骤2
 
 ~~~go
@@ -401,6 +402,88 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 
 
 
+##### 删除元素
+
+* 检测hashWriting标志位，若已经设置则panic(并发写)。否则设置hashWriting标志位
+* 计算`key`的哈希值，并获取所在的bucket
+* 检查是否正在rehash，若正在rehash则尝试将当前bucket从旧哈希表中迁移到新哈希表中
+* 在bucket中查找指定键
+* 检测hashWriting标志位，看是否已被清除若清除则panic(并发写)。否则清除hashWriting标志位
+
+~~~go
+func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
+	if raceenabled && h != nil {
+		callerpc := getcallerpc(unsafe.Pointer(&t))
+		pc := funcPC(mapdelete)
+		racewritepc(unsafe.Pointer(h), callerpc, pc)
+		raceReadObjectPC(t.key, key, callerpc, pc)
+	}
+	if msanenabled && h != nil {
+		msanread(key, t.key.size)
+	}
+	if h == nil || h.count == 0 {
+		return
+	}
+	if h.flags&hashWriting != 0 {
+		throw("concurrent map writes")
+	}
+	h.flags |= hashWriting
+
+	alg := t.key.alg
+	hash := alg.hash(key, uintptr(h.hash0))
+	bucket := hash & (uintptr(1)<<h.B - 1)
+	if h.growing() {
+		growWork(t, h, bucket)
+	}
+	b := (*bmap)(unsafe.Pointer(uintptr(h.buckets) + bucket*uintptr(t.bucketsize)))
+	top := uint8(hash >> (sys.PtrSize*8 - 8))
+	if top < minTopHash {
+		top += minTopHash
+	}
+	for {
+		for i := uintptr(0); i < bucketCnt; i++ {
+			if b.tophash[i] != top {
+				continue
+			}
+			k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+			k2 := k
+			if t.indirectkey {
+				k2 = *((*unsafe.Pointer)(k2))
+			}
+			if !alg.equal(key, k2) {
+				continue
+			}
+			if t.indirectkey {
+				*(*unsafe.Pointer)(k) = nil
+			} else {
+				typedmemclr(t.key, k)
+			}
+			v := unsafe.Pointer(uintptr(unsafe.Pointer(b)) + dataOffset + bucketCnt*uintptr(t.keysize) + i*uintptr(t.valuesize))
+			if t.indirectvalue {
+				*(*unsafe.Pointer)(v) = nil
+			} else {
+				typedmemclr(t.elem, v)
+			}
+			b.tophash[i] = empty
+			h.count--
+			goto done
+		}
+		b = b.overflow(t)
+		if b == nil {
+			goto done
+		}
+	}
+
+done:
+	if h.flags&hashWriting == 0 {
+		throw("concurrent map writes")
+	}
+	h.flags &^= hashWriting
+}
+~~~
+
+
+
 #### 调整哈希表大小
 
 #####  hashGrow 增大哈希表
@@ -501,6 +584,30 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 		xk = add(unsafe.Pointer(x), dataOffset)
 		xv = add(xk, bucketCnt*uintptr(t.keysize))
         
+        /*
+        0 % 4 = 0 
+        1 % 4= 1
+        3 %4 =3
+        4 %4 = 0  100   %8=4
+        5 %4=1    101   %8 =5
+        6%4=2      110  %8=6
+        7 % 4      111 %8 =7
+        8 % 4 = 0  1000 %8=0
+        9%4 = 1    1001 %8=1
+        10%4=2     1010 %8=2
+        11%4=3     1011 %8=3
+        12%4=0     1100 %8=4
+        13%4=1     1101
+                   x0xx
+        
+        0%8=0
+        1%8=1
+        2%8=2
+        3%8 = 3
+        4%8=4
+        5%8=5
+        7%8=7
+        */
         //哈希表增大
         //??????????????????????????, 确定新bucket的原因没搞明白
 		if !h.sameSizeGrow() {
@@ -562,8 +669,11 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 						}
 					}//end if h.flags & iterator != 0
                     
-                    //那种情况hash & newbit 是0
+                    //newbit 是旧哈希表的大小
+                    //那种情况hash & newbit 是0, 为啥是0就用usex
                     //哪种情况hash & newbit 是1
+                    //这个的原理没搞清楚
+                    
 					useX = hash&newbit == 0
                 }//end if !h.sameSizeGrow()
                 
