@@ -71,9 +71,7 @@
 	minTopHash     = 4 // minimum tophash for a normal filled cell.
 ~~~
 
-
-
-#### 基本操作
+### 总结
 
 map的大致结构
 
@@ -81,8 +79,43 @@ map的大致结构
 
 有意思的两点:
 
-* bucket的存储方式
-* rehash。rehash是通过增量rehash完成的， 插入时根据当前bucket是否完成迁移确定在新哈希表还是旧哈希表中查找`key`。添加时则总在新哈希表中添加。插入过程会不断的推进bucket的迁移
+* bucket的存储方式, go的map实现为什么不采用`单链表`来解决冲突。
+* rehash。rehash是通过增量方式完成的。 查找时，时根据当前bucket是否完成迁移确定在新哈希表还是旧哈希表中查找`key`；添加时则总在新哈希表中添加，插入过程会不断的推进bucket的迁移。删除时，会先检查是否正在进行rehash。若正在进行rehash则先迁移被删除的`key`所在的bucket，然后再删除;
+* 原本有大量删除元素时，为什么不减小哈希表的大小来回收空间这样的疑问？因为go的GC会自动回收不使用的内存，所以就没必要了
+
+
+
+### 基本操作
+
+
+
+~~~go
+// A header for a Go map.
+type hmap struct {
+	// Note: the format of the Hmap is encoded in ../../cmd/internal/gc/reflect.go and
+	// ../reflect/type.go. Don't change this structure without also changing that code!
+	count     int // # live cells == size of map.  Must be first (used by len() builtin)
+	flags     uint8
+	B         uint8  // log_2 of # of buckets (can hold up to loadFactor * 2^B items)
+	noverflow uint16 // approximate number of overflow buckets; see incrnoverflow for details
+	hash0     uint32 // hash seed
+
+	buckets    unsafe.Pointer // array of 2^B Buckets. may be nil if count==0.
+	oldbuckets unsafe.Pointer // previous bucket array of half the size, non-nil only when growing
+	nevacuate  uintptr        // progress counter for evacuation (buckets less than this have been evacuated)
+
+	// If both key and value do not contain pointers and are inline, then we mark bucket
+	// type as containing no pointers. This avoids scanning such maps.
+	// However, bmap.overflow is a pointer. In order to keep overflow buckets
+	// alive, we store pointers to all overflow buckets in hmap.overflow.
+	// Overflow is used only if key and value do not contain pointers.
+	// overflow[0] contains overflow buckets for hmap.buckets.
+	// overflow[1] contains overflow buckets for hmap.oldbuckets.
+	// The first indirection allows us to reduce static size of hmap.
+	// The second indirection allows to store a pointer to the slice in hiter.
+	overflow *[2]*[]*bmap
+}
+~~~
 
 
 
@@ -402,7 +435,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 
 
 
-##### 删除元素
+##### mapdelete 删除元素
 
 * 检测hashWriting标志位，若已经设置则panic(并发写)。否则设置hashWriting标志位
 * 计算`key`的哈希值，并获取所在的bucket
