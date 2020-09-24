@@ -11,6 +11,14 @@ select 处理case的顺序，面试的时候经常会被问这个问题。我之
 * 第三次按3、1、2的顺序处理
 * 跳转到第一种情况，重复这个过程
 
+
+
+## Fisher-Yates(shuffle) 算法
+
+在网上按关键词`permuted algorithm`搜索了一下，看到`Fisher-Yates` shuffle又称为`knuth shuffle`算法（用于生成数组的一个随机排列)跟golang生成pollorder的算法有点像
+
+
+
 ## hselect
 
 ~~~go
@@ -1215,11 +1223,53 @@ func selectdefaultImpl(sel *hselect, callerpc uintptr, so uintptr) {
 
 
 
+### sellock 对channel上锁
+
+~~~go
+func sellock(scases []scase, lockorder []uint16) {
+	var c *hchan
+	for _, o := range lockorder {
+		c0 := scases[o].c
+		if c0 != nil && c0 != c {
+			c = c0
+			lock(&c.lock)
+		}
+	}
+}
+~~~
+
+
+
 ### selectgo 轮询case分支
 
 selectgo 负责轮询case分支，轮询的顺序是随机的还是顺序的
 
+* 生成确定case执行顺序的随机序列pollorder, pollorder[i]的值决定了case的执行顺序
+* 根据channel的地址，生成一个加锁序列。对所有的channel加锁
+* 
 
+
+
+1.4 版本的算法
+
+~~~go
+	// generate permuted order
+	pollslice := sliceStruct{unsafe.Pointer(sel.pollorder), int(sel.ncase), int(sel.ncase)}
+	pollorder := *(*[]uint16)(unsafe.Pointer(&pollslice))
+	for i := 0; i < int(sel.ncase); i++ {
+		pollorder[i] = uint16(i)
+	}
+	for i := 1; i < int(sel.ncase); i++ {
+		o := pollorder[i]
+		j := int(fastrand1()) % (i + 1)
+		pollorder[i] = pollorder[j]
+		pollorder[j] = o
+	}
+~~~
+
+
+
+随机序列pollorder的算法没看明白
 
 ~~~go
 
@@ -1272,21 +1322,35 @@ func selectgoImpl(sel *hselect) (uintptr, uint16) {
 	// generate permuted order
 	pollslice := slice{unsafe.Pointer(sel.pollorder), int(sel.ncase), int(sel.ncase)}
 	pollorder := *(*[]uint16)(unsafe.Pointer(&pollslice))
+    //假设ncase 为3
     //为什么是从1开始的, pollorder[0]的值是0
 	for i := 1; i < int(sel.ncase); i++ {
+        //i = 1时， j取0 或1
+        //i = 2时， j取0 或1 或2
 		j := int(fastrand()) % (i + 1) //j的取值是 0 到 i
+        
+        //若i == j, 则pollorder[i]值不变
+        //若i != j, 则pollorder[i]的值是pollorder[j]的值
 		pollorder[i] = pollorder[j]
+        
+        //若i == j, pollorder[j] = i
+        //若i != j,
 		pollorder[j] = uint16(i)
+        
+        //若i == j, pollorder[i] == i
+        //
 	}
 
 	// sort the cases by Hchan address to get the locking order.
 	// simple heap sort, to guarantee n log n time and constant stack footprint.
 	lockslice := slice{unsafe.Pointer(sel.lockorder), int(sel.ncase), int(sel.ncase)}
 	lockorder := *(*[]uint16)(unsafe.Pointer(&lockslice))
+    //大根堆
 	for i := 0; i < int(sel.ncase); i++ {
 		j := i
 		// Start with the pollorder to permute cases on the same channel.
 		c := scases[pollorder[i]].c
+        //父小于子，父下移
 		for j > 0 && scases[lockorder[(j-1)/2]].c.sortkey() < c.sortkey() {
 			k := (j - 1) / 2
 			lockorder[j] = lockorder[k]
@@ -1349,6 +1413,7 @@ loop:
 		c = cas.c
 
 		switch cas.kind {
+            //等待从channel读取消息
 		case caseRecv:
 			sg = c.sendq.dequeue()
 			if sg != nil {
