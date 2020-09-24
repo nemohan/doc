@@ -2,6 +2,30 @@
 
 [TOC]
 
+select 处理case的顺序，面试的时候经常会被问这个问题。我之前认为是随机的，理由是，若是顺序处理可能出现后面的case得不到处理机会的情况。
+
+仔细想想应该既不是常规意义上的顺序处理，也不是完全随机处理。因为完全随机带有不确定性，顺序处理又会出现上面提到的情况。可能会以这种方式处理，假如现在有3个case，分别为case1、case2、case3。
+
+* 第一次按1、2、3的顺序处理
+* 第二次按2、3、1的顺序处理
+* 第三次按3、1、2的顺序处理
+* 跳转到第一种情况，重复这个过程
+
+## hselect
+
+~~~go
+// Select statement header.
+// Known to compiler.
+// Changes here must also be made in src/cmd/internal/gc/select.go's selecttype.
+type hselect struct {
+	tcase     uint16   // total count of scase[]
+	ncase     uint16   // currently filled scase[]
+	pollorder *uint16  // case poll order
+	lockorder *uint16  // channel lock order
+	scase     [1]scase // one per case (in order of appearance)
+}
+~~~
+
 
 
 ### 用到的文件
@@ -1085,6 +1109,8 @@ func newselect(sel *hselect, selsize int64, size int32) {
 
 ### newselect 
 
+newselect 为select语句创建hselect结构体，用来记录一些相关信息
+
 * 参数size 对应分支数目
 
 ~~~go
@@ -1118,7 +1144,9 @@ func newselect(sel *hselect, selsize int64, size int32) {
 
 
 
-### selectrecv
+### selectrecv 实现  <- chan
+
+selectrecv 主要实现从channel读取的case分支, selectrecv对应`case v := <-ch:`语句，
 
 ~~~go
 //go:nosplit
@@ -1156,7 +1184,9 @@ func selectrecvImpl(sel *hselect, c *hchan, pc uintptr, elem unsafe.Pointer, rec
 
 
 
-### default 分支
+### default 实现default:
+
+
 
 ~~~go
 //go:nosplit
@@ -1185,9 +1215,9 @@ func selectdefaultImpl(sel *hselect, callerpc uintptr, so uintptr) {
 
 
 
-### selectgo
+### selectgo 轮询case分支
 
-
+selectgo 负责轮询case分支，轮询的顺序是随机的还是顺序的
 
 
 
@@ -1242,8 +1272,9 @@ func selectgoImpl(sel *hselect) (uintptr, uint16) {
 	// generate permuted order
 	pollslice := slice{unsafe.Pointer(sel.pollorder), int(sel.ncase), int(sel.ncase)}
 	pollorder := *(*[]uint16)(unsafe.Pointer(&pollslice))
+    //为什么是从1开始的, pollorder[0]的值是0
 	for i := 1; i < int(sel.ncase); i++ {
-		j := int(fastrand()) % (i + 1)
+		j := int(fastrand()) % (i + 1) //j的取值是 0 到 i
 		pollorder[i] = pollorder[j]
 		pollorder[j] = uint16(i)
 	}
@@ -1284,7 +1315,7 @@ func selectgoImpl(sel *hselect) (uintptr, uint16) {
 			break
 		}
 		lockorder[j] = o
-	}
+    }//end for i := int(sel.ncase)-1;
 	/*
 		for i := 0; i+1 < int(sel.ncase); i++ {
 			if scases[lockorder[i]].c.sortkey() > scases[lockorder[i+1]].c.sortkey() {
