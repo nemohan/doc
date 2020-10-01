@@ -1,4 +1,4 @@
-# channel
+channel
 
 [TOC]
 
@@ -13,6 +13,10 @@
 * 读取已经关闭的channel，会读取到对应类型的0值
 
 
+
+#### 疑问
+
+* 对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值
 
 
 
@@ -40,8 +44,8 @@ type hchan struct {
 	elemtype *_type // element type
 	sendx    uint   // send index
 	recvx    uint   // receive index
-	recvq    waitq  // list of recv waiters
-	sendq    waitq  // list of send waiters
+	recvq    waitq  // list of recv waiters 接收协程等待队列
+	sendq    waitq  // list of send waiters 发送协程等待队列
 
 	// lock protects all fields in hchan, as well as several
 	// fields in sudogs blocked on this channel.
@@ -56,6 +60,11 @@ type hchan struct {
 
 
 ### 创建channel
+
+* 参数t 包含了channel元素的类型， size则指定了channel缓冲大小
+* 不支持超过16K大小的元素类型
+* 缓冲大小不能小于0， 也不能超过`(_MaxMem-hchanSize)/elem.size`确定的上限
+* 若元素类型不包含指针 或 缓冲大小为0，则消息队列和chan公用一块内存；若包含指针则消息队列和hchan使用独立的内存块
 
 ~~~go
 func makechan(t *chantype, size int64) *hchan {
@@ -72,6 +81,7 @@ func makechan(t *chantype, size int64) *hchan {
 		panic(plainError("makechan: size out of range"))
 	}
 
+    //不含指针或缓冲大小为0
 	var c *hchan
 	if elem.kind&kindNoPointers != 0 || size == 0 {
 		// Allocate memory in one call.
@@ -80,9 +90,10 @@ func makechan(t *chantype, size int64) *hchan {
 		// SudoG's are referenced from their owning thread so they can't be collected.
 		// TODO(dvyukov,rlh): Rethink when collector can move allocated objects.
 		c = (*hchan)(mallocgc(hchanSize+uintptr(size)*elem.size, nil, true))
+        //缓冲大小不为0 且 元素大小不为0
 		if size > 0 && elem.size != 0 {
 			c.buf = add(unsafe.Pointer(c), hchanSize)
-		} else {
+		} else {//缓冲大小为0 或 元素大小为0
 			// race detector uses this location for synchronization
 			// Also prevents us from pointing beyond the allocation (see issue 9401).
 			c.buf = unsafe.Pointer(c)
@@ -337,7 +348,28 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 
 ###  接收消息
 
-* 接收消息。 以阻塞模式接收消息，1）若通道已经关闭，且缓冲为空，返回对应元素的0值；2）消息发送协程等待队列不为空，则从发送协程处直接接收消息；3）缓冲不为空,从缓冲中取消息，完成；4）将接收协程 放入消息等待队列，并进入等待状态
+#### 阻塞模式接收消息
+
+ 以阻塞模式接收消息，即block参数为true。分为以下几种情况:
+
+1. 若通道已经关闭，且缓冲为空，返回对应元素的0值；
+2. 消息发送协程等待队列不为空，则从发送协程处直接接收消息；
+3. 缓冲不为空,从缓冲中取消息，完成；
+4. 将接收协程 放入消息等待队列，并进入等待状态
+
+#### 非阻塞模式接收消息
+
+以非阻塞模式接收消息。即chanrecv的block参数为false。分为以下几种情况:
+
+1. 若channel是nil,则直接、返回；
+2. 非阻塞且channel未关闭时又分为两种情况, 一，channel不带缓冲,且发送消息队列为空，立即返回。二，channel带缓冲，且缓冲中没有等待读取的消息，立即返回；
+3. <font color="red">channel已经关闭且消息队列中没有消息,立即返回</font> 
+4. 发送协程等待队列不为空，即有协程在等待发送消息。调用recv
+5. 消息队列不为空时，并没有检查channel是否已经关闭。即使关闭，也会从消息队列取得消息并返回
+
+
+
+从上面的分析可以看出，在channel的消息队列不为空，且被关闭后。继续从channel读取消息时，仍能读取到消息队列上的消息
 
 ~~~go
 // entry points for <- c from compiled code
@@ -366,6 +398,9 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 		print("chanrecv: chan=", c, "\n")
 	}
 
+    //读取为空的channel
+    //阻塞模式，进入阻塞
+    //非阻塞模式，立即返回
 	if c == nil {
 		if !block {
 			return
@@ -445,6 +480,7 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 		return true, true
 	}
 
+    //哪种情况会走到这？ 缓冲为空
 	if !block {
 		unlock(&c.lock)
 		return false, false
@@ -484,6 +520,14 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 	return true, !closed
 }
 
+
+~~~
+
+
+
+#### recv
+
+~~~go
 // recv processes a receive operation on a full channel c.
 // There are 2 parts:
 // 1) The value sent by the sender sg is put into the channel
@@ -539,10 +583,7 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func()) {
 	}
 	goready(gp, 4)
 }
-
 ~~~
-
-
 
 
 

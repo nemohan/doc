@@ -2,9 +2,13 @@
 
 [TOC]
 
+## 总结
+
 select 处理case的顺序，面试的时候经常会被问这个问题。我之前认为是随机的，理由是，若是顺序处理可能出现后面的case得不到处理机会的情况。
 
-仔细想想应该既不是常规意义上的顺序处理，也不是完全随机处理。因为完全随机带有不确定性，顺序处理又会出现上面提到的情况。可能会以这种方式处理，假如现在有3个case，分别为case1、case2、case3。
+仔细想想应该既不
+
+是常规意义上的顺序处理，也不是完全随机处理。因为完全随机带有不确定性，顺序处理又会出现上面提到的情况。可能会以这种方式处理，假如现在有3个case，分别为case1、case2、case3。
 
 * 第一次按1、2、3的顺序处理
 * 第二次按2、3、1的顺序处理
@@ -13,7 +17,30 @@ select 处理case的顺序，面试的时候经常会被问这个问题。我之
 
 
 
-## Fisher-Yates(shuffle) 算法
+看完select的实现之后，上面的分析部分正确。实际上要更复杂一些，分成以下几种情况讨论:
+
+* 没有满足条件的case可以处理
+* 只有一个满足条件的case
+* 有多个满足条件的case
+
+
+
+
+
+### 注意
+
+空的select语句会导致阻塞
+
+~~~go
+//导致当前协程阻塞
+select{
+    
+}
+~~~
+
+
+
+### Fisher-Yates(shuffle) 算法
 
 在网上按关键词`permuted algorithm`搜索了一下，看到`Fisher-Yates` shuffle又称为`knuth shuffle`算法（用于生成数组的一个随机排列)跟golang生成pollorder的算法有点像
 
@@ -1246,7 +1273,7 @@ selectgo 负责轮询case分支，轮询的顺序是随机的还是顺序的
 
 * 生成确定case执行顺序的随机序列pollorder, pollorder[i]的值决定了case的执行顺序
 * 根据channel的地址，生成一个加锁序列。对所有的channel加锁
-* 
+* 处理所有的case,分为几种情况：1）至少有一个case满足条件；2）没有case满足；3）没有case满足且带有default分支
 
 
 
@@ -1413,30 +1440,39 @@ loop:
 		c = cas.c
 
 		switch cas.kind {
-            //等待从channel读取消息
+            //处理读取channel的case，分三种情况
 		case caseRecv:
+            //发送消息的协程等待队列不为空
+            //case 1: channel不带缓冲，且没有读取者
+            //case 2: channel带缓冲，缓冲满
 			sg = c.sendq.dequeue()
 			if sg != nil {
 				goto recv
 			}
+            
+            //case 2: 消息队列有消息
 			if c.qcount > 0 {
 				goto bufrecv
 			}
+            //case 3: channel被关闭
 			if c.closed != 0 {
 				goto rclose
 			}
-
+		//处理向channel写消息的case
 		case caseSend:
 			if raceenabled {
 				racereadpc(unsafe.Pointer(c), cas.pc, chansendpc)
 			}
+            //case1: channel 已经关闭
 			if c.closed != 0 {
 				goto sclose
 			}
+            //case2: 等待接收消息的协程队列不为空
 			sg = c.recvq.dequeue()
 			if sg != nil {
 				goto send
 			}
+            //case3: 消息队列有空间
 			if c.qcount < c.dataqsiz {
 				goto bufsend
 			}
@@ -1447,14 +1483,16 @@ loop:
 	}
 
     
-    // 只要上面有任何一个分支的条件是满足的，都不会走到这 
+    //处理default 分支
 	if dfl != nil {
 		selunlock(scases, lockorder)
 		cas = dfl
 		goto retc
 	}
-
+    
+	//不带default分支的select
     //只能等待所有的channel，等待条件满足
+    //将当前协程放入对应的channel的协程等待队列，若是从channel读取，则放入接收等待队列；若是写入channel,则放入发送等待队列
 	// pass 2 - enqueue on all chans
 	gp = getg()
 	done = 0
@@ -1490,7 +1528,8 @@ loop:
 		}
 	}
 
-	// wait for someone to wake us up
+	// wait for someone to wake us 
+    //进入等待
 	gp.param = nil
 	gopark(selparkcommit, nil, "select", traceEvGoBlockSelect, 2)
 
@@ -1572,6 +1611,8 @@ loop:
 		if sglist.releasetime > 0 {
 			k.releasetime = sglist.releasetime
 		}
+        //sg 是gp.param
+        //sg == sglist意味着什么。
 		if sg == sglist {
 			// sg has already been dequeued by the G that woke us up.
 			cas = k
@@ -1632,6 +1673,8 @@ loop:
 	selunlock(scases, lockorder)
 	goto retc
 
+   //case <-ch
+   //带缓冲的channel，从缓冲获取消息
 bufrecv:
 	// can receive from buffer
 	if raceenabled {
@@ -1679,6 +1722,7 @@ bufsend:
 	selunlock(scases, lockorder)
 	goto retc
 
+    //准备从channel读取消息，且已经有发送消息的协程在等待队列
 recv:
 	// can receive from sleeping sender (sg)
 	recv(c, sg, cas.elem, func() { selunlock(scases, lockorder) })
@@ -1690,6 +1734,8 @@ recv:
 	}
 	goto retc
 
+    //case <-ch:
+    //读取已经关闭的channel
 rclose:
 	// read at end of closed channel
 	selunlock(scases, lockorder)
@@ -1723,11 +1769,21 @@ retc:
 		blockevent(cas.releasetime-t0, 2)
 	}
 	return cas.pc, cas.so
-
+//写已经关闭的channel
 sclose:
 	// send on closed channel
 	selunlock(scases, lockorder)
 	panic(plainError("send on closed channel"))
 }
 ~~~
+
+
+
+
+
+
+
+## 参考
+
+* 《concurrency in go》
 
