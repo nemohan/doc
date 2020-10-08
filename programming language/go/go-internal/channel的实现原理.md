@@ -17,6 +17,7 @@ channel
 #### 疑问
 
 * 对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值
+* 协程因等待接收或发送消息进入等待状态。因channel关闭或可以接收、发送消息被唤醒
 
 
 
@@ -117,10 +118,30 @@ func makechan(t *chantype, size int64) *hchan {
 
 ### 发送消息
 
-* 以阻塞模式发送消息。 首先检查channel是否已经关闭,若已经关闭则报panic；1）若未关闭, 则查看等待消息的协程队列，若有协程等待消息，则调用sendDirect将消息拷贝到该协程的内存上,然后使等待协程就绪，发送就此完成。2）否则检查channel的缓冲是否有空间，若还有空间则将消息放到缓冲中。若缓冲没有空间，则将发送协程放入等待队列并进入等待状态
+发送消息有两种方式，即阻塞模式和非阻塞模式。阻塞模式下chansend的block参数为true,非阻塞模式block参数为false
+
+##### 以阻塞模式发送消息
+
+1.  若channel为nil,则阻塞
+2. 检查channel是否已经关闭,若已经关闭则panic；
+3. 查看`等待接收消息的协程队列`，若有协程等待消息，则调用send, 然后返回。
+4. 检查channel的缓冲是否有空间，若还有空间则将消息放到缓冲中,然后返回。
+5. 若缓冲没有空间，则将发送协程放入等待队列并进入等待状态
+6. 被唤醒，若gp.param为nil，且hchan.closed为true,因为channel关闭被唤醒，panic；若gp.param不为nil,则说明发送消息成功
+
+
+
+##### 非阻塞模式发送消息
+
+1. 若channel为nil,立即返回
+2. channel未关闭。满足以下两个条件之一立即返回，channel不带缓冲且没有协程在`接收消息协程等待队列`；2）channel带缓冲且缓冲满
+3. 检查channel是否已经关闭，若关闭则panic
+4. 检查`等待接收消息的协程队列`,若有协程等待接收消息，则调用send，然后返回
+5. 若channel的缓冲还有剩余空间，则消息放到缓冲中，然后返回
+6. 以上条件都不满足，立即返回
 
 ~~~go
-//通过channel 发送消息
+// 通过channel 发送消息
 // c<-x 
 // entry point for c <- x from compiled code
 //go:nosplit
@@ -264,6 +285,7 @@ func chansend(t *chantype, c *hchan, ep unsafe.Pointer, block bool, callerpc uin
 	}
 	gp.waiting = nil
 	if gp.param == nil {
+        //什么时候触发这个
 		if c.closed == 0 {
 			throw("chansend: spurious wakeup")
 		}
@@ -279,6 +301,17 @@ func chansend(t *chantype, c *hchan, ep unsafe.Pointer, block bool, callerpc uin
 }
 
 
+
+~~~
+
+
+
+##### send
+
+* 调用sendDirect将消息直接拷贝到等待接收消息的协程的地址上
+* 唤醒正在等待的第一个协程
+
+~~~go
 // send processes a send operation on an empty channel c.
 // The value ep sent by the sender is copied to the receiver sg.
 // The receiver is then woken up to go on its merry way.
@@ -319,6 +352,8 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func()) {
 }
 ~~~
 
+
+
 ##### sendDirect 直接将消息拷贝到接收协程的内存上
 
 ~~~go
@@ -348,14 +383,18 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 
 ###  接收消息
 
+下面的消息队列即channel所带的缓冲
+
 #### 阻塞模式接收消息
 
  以阻塞模式接收消息，即block参数为true。分为以下几种情况:
 
-1. 若通道已经关闭，且缓冲为空，返回对应元素的0值；
-2. 消息发送协程等待队列不为空，则从发送协程处直接接收消息；
-3. 缓冲不为空,从缓冲中取消息，完成；
-4. 将接收协程 放入消息等待队列，并进入等待状态
+1. 若channel为nil，则阻塞
+2. 若通道已经关闭，且消息队列中没有消息，返回对应元素的0值；
+3. 消息发送协程等待队列不为空，则调用recv从发送协程处直接接收消息；
+4. 消息队列不为空,从消息队列中取消息，完成；
+5. 将接收协程 放入消息等待队列，并进入等待状态
+6. 被唤醒后，根据gp.param是否为nil确定被唤醒的原因。若gp.param是nil则表示因channel关闭被唤醒。若不为nil,则表示因接收到消息被唤醒
 
 #### 非阻塞模式接收消息
 
@@ -363,9 +402,10 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 
 1. 若channel是nil,则直接、返回；
 2. 非阻塞且channel未关闭时又分为两种情况, 一，channel不带缓冲,且发送消息队列为空，立即返回。二，channel带缓冲，且缓冲中没有等待读取的消息，立即返回；
-3. <font color="red">channel已经关闭且消息队列中没有消息,立即返回</font> 
+3. <font color="red">channel已经关闭且消息队列中没有消息,返回对应元素的0值</font>
 4. 发送协程等待队列不为空，即有协程在等待发送消息。调用recv
-5. 消息队列不为空时，并没有检查channel是否已经关闭。即使关闭，也会从消息队列取得消息并返回
+5. <font color="red">消息队列不为空时，并没有检查channel是否已经关闭。即使关闭，也会从消息队列取得消息并返回</font>
+6. 以上条件都不满足，立即返回
 
 
 
@@ -449,7 +489,8 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 		return true, false
 	}
 
-    //会有这样一种情况: sendq不为空，若是带缓存的channel.必然是缓存已经满。
+    //case 1: channel不带缓冲。
+    //case 2: channel带缓冲，且缓冲已满
 	if sg := c.sendq.dequeue(); sg != nil {
 		// Found a waiting sender. If buffer is size 0, receive value
 		// directly from sender. Otherwise, receive from head of queue
@@ -480,7 +521,7 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 		return true, true
 	}
 
-    //哪种情况会走到这？ 缓冲为空
+    //以上条件没有一个满足，立即返回
 	if !block {
 		unlock(&c.lock)
 		return false, false
@@ -500,7 +541,8 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 	gp.waiting = mysg
 	mysg.g = gp
 	mysg.selectdone = nil
-	mysg.c = c
+	mysg.c = c 
+    //gp.param 在这里用途????
 	gp.param = nil
 	c.recvq.enqueue(mysg)
 	goparkunlock(&c.lock, "chan receive", traceEvGoBlockRecv, 3)
@@ -513,6 +555,8 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 	if mysg.releasetime > 0 {
 		blockevent(mysg.releasetime-t0, 2)
 	}
+    //若gp.param 是nil,则表示协程因为channel关闭被唤醒,则closed为true
+    //若gp.param不是nil,则表示接收到消息被唤醒
 	closed := gp.param == nil
 	gp.param = nil
 	mysg.c = nil
@@ -526,6 +570,10 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 
 
 #### recv
+
+1. 若channel不带缓冲，并且保存接收到的消息的地址不为空(ep !=nil)，则调用recvDirect
+2. channel带缓冲，从缓冲拷贝消息
+3. 因为有了空位，所以唤醒一个在`等待发送消息协程队列`中的协程
 
 ~~~go
 // recv processes a receive operation on a full channel c.
@@ -587,7 +635,13 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func()) {
 
 
 
-### 关闭channel
+### closechan 关闭channel
+
+1. 若channel为nil，则panic
+2. 若channel已经被关闭，则panic
+3. 设置hchan.closed为1
+4. 唤醒所有在`接收消息协程等待队列`的协程
+5. 唤醒所有在`发送消息协程等待队列`的协程
 
 ~~~go
 //关闭channel
