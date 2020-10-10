@@ -4,11 +4,9 @@
 
 ## 总结
 
-select 处理case的顺序，面试的时候经常会被问这个问题。我之前认为是随机的，理由是，若是顺序处理可能出现后面的case得不到处理机会的情况。
+select 处理case的顺序，面试的时候经常会问这个问题。我之前认为是随机的，理由是，若是顺序处理可能出现后面的case得不到处理机会的情况。
 
-仔细想想应该既不
-
-是常规意义上的顺序处理，也不是完全随机处理。因为完全随机带有不确定性，顺序处理又会出现上面提到的情况。可能会以这种方式处理，假如现在有3个case，分别为case1、case2、case3。
+仔细想想应该既不是常规意义上的顺序处理，也不是完全随机处理。因为完全随机带有不确定性，顺序处理又会出现上面提到的情况。可能会以这种方式处理，假如现在有3个case，分别为case1、case2、case3。
 
 * 第一次按1、2、3的顺序处理
 * 第二次按2、3、1的顺序处理
@@ -20,8 +18,8 @@ select 处理case的顺序，面试的时候经常会被问这个问题。我之
 看完select的实现之后，上面的分析部分正确。实际上要更复杂一些，分成以下几种情况讨论:
 
 * 没有满足条件的case可以处理
-* 只有一个满足条件的case
-* 有多个满足条件的case
+* 只有一个满足条件的case, 那么这个case会得到处理
+* 有多个满足条件的case,也只有一个case会得到处理
 
 
 
@@ -46,22 +44,11 @@ select{
 
 
 
-## hselect
-
-~~~go
-// Select statement header.
-// Known to compiler.
-// Changes here must also be made in src/cmd/internal/gc/select.go's selecttype.
-type hselect struct {
-	tcase     uint16   // total count of scase[]
-	ncase     uint16   // currently filled scase[]
-	pollorder *uint16  // case poll order
-	lockorder *uint16  // channel lock order
-	scase     [1]scase // one per case (in order of appearance)
-}
-~~~
 
 
+
+
+## 简单select
 
 ### 用到的文件
 
@@ -1142,6 +1129,25 @@ func newselect(sel *hselect, selsize int64, size int32) {
 
 
 
+## select 的实现
+
+### hselect的定义
+
+~~~go
+// Select statement header.
+// Known to compiler.
+// Changes here must also be made in src/cmd/internal/gc/select.go's selecttype.
+type hselect struct {
+	tcase     uint16   // total count of scase[] 分支数目
+	ncase     uint16   // currently filled scase[]
+	pollorder *uint16  // case poll order poll序列
+	lockorder *uint16  // channel lock order
+	scase     [1]scase // one per case (in order of appearance)
+}
+~~~
+
+
+
 ### newselect 
 
 newselect 为select语句创建hselect结构体，用来记录一些相关信息
@@ -1267,13 +1273,23 @@ func sellock(scases []scase, lockorder []uint16) {
 
 
 
-### selectgo 轮询case分支
+### selectgo 处理case分支, select的核心
 
 selectgo 负责轮询case分支，轮询的顺序是随机的还是顺序的
 
 * 生成确定case执行顺序的随机序列pollorder, pollorder[i]的值决定了case的执行顺序
+
 * 根据channel的地址，生成一个加锁序列。对所有的channel加锁
-* 处理所有的case,分为几种情况：1）至少有一个case满足条件；2）没有case满足；3）没有case满足且带有default分支
+
+* 处理所有的case,分为几种情况：
+
+
+
+  处理case时的情况：
+
+  1. 至少有一个case满足条件,只能处理一个满足条件的case分支,然后返回；
+  2. 没有case满足。获取一个sg, 并将sg加入所有channel的等待队列，然后当前协程等待状态，若有任意一个channel满足条件，当前协程就被唤醒。唤醒后，将sg从其他channel的等待队列移出。根据被唤醒的原因，确定是立即返回，还是重新处理所有的case(某个channel 被关闭)
+  3. 没有case满足且带有default分支, 处理default分支,然后返回
 
 
 
@@ -1450,7 +1466,7 @@ loop:
 				goto recv
 			}
             
-            //case 2: 消息队列有消息
+            //case 2: 消息队列有消息,从消息队列取消息
 			if c.qcount > 0 {
 				goto bufrecv
 			}
@@ -1499,10 +1515,13 @@ loop:
 	if gp.waiting != nil {
 		throw("gp.waiting != nil")
 	}
+    
+    //nextp 是指向sudog的指针的指针
 	nextp = &gp.waiting
 	for _, casei := range lockorder {
 		cas = &scases[casei]
 		c = cas.c
+        //调用acquireSudog获得sg结构
 		sg := acquireSudog()
 		sg.g = gp
 		// Note: selectdone is adjusted for stack copies in stack1.go:adjustsudogs
@@ -1516,6 +1535,7 @@ loop:
 		}
 		sg.c = c
 		// Construct waiting list in lock order.
+        //构造一个等待链表,
 		*nextp = sg
 		nextp = &sg.waitlink
 
@@ -1589,6 +1609,9 @@ loop:
 		sellock(scases, lockorder)
 	})
 
+    //若等待过程中，任意一个channel满足条件，当前协程就会被唤醒
+    //因为进入每个channel的等待队列，使用的都是不同的sg, 被唤醒时的gp.param就是对应满足条件的channel的sg, gp.param有可能是nil
+    
 	sg = (*sudog)(gp.param)
 	gp.param = nil
 
@@ -1606,17 +1629,19 @@ loop:
 	}
 	gp.waiting = nil
 
+    //通过遍历sglist,确定是哪个case, sg 有可能是nil
 	for _, casei := range lockorder {
 		k = &scases[casei]
 		if sglist.releasetime > 0 {
 			k.releasetime = sglist.releasetime
 		}
         //sg 是gp.param
-        //sg == sglist意味着什么。
+        //sg == sglist意味着什么。为啥会不相等
 		if sg == sglist {
 			// sg has already been dequeued by the G that woke us up.
 			cas = k
 		} else {
+            //将sg从channel的等待队列中移出
 			c = k.c
 			if k.kind == caseSend {
 				c.sendq.dequeueSudoG(sglist)
@@ -1630,6 +1655,7 @@ loop:
 		sglist = sgnext
 	}
 
+    //cas == nil, 即上面没有满足sg == sglist,也有可能是gp.param是Nil(channel被关闭的情况下)
 	if cas == nil {
 		// We can wake up with gp.param == nil (so cas == nil)
 		// when a channel involved in the select has been closed.
@@ -1649,6 +1675,7 @@ loop:
 		print("wait-return: sel=", sel, " c=", c, " cas=", cas, " kind=", cas.kind, "\n")
 	}
 
+    //cas.receivedp 是啥
 	if cas.kind == caseRecv {
 		if cas.receivedp != nil {
 			*cas.receivedp = true

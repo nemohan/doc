@@ -14,10 +14,11 @@ channel
 
 
 
-#### 疑问
+#### 注意
 
-* 对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值
+* <font color="red">对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值。仍会读取到在队列的消息</font>
 * 协程因等待接收或发送消息进入等待状态。因channel关闭或可以接收、发送消息被唤醒
+* 进入等待队列的协程，都是拿到消息或发送消息成功后，才被唤醒
 
 
 
@@ -43,8 +44,8 @@ type hchan struct {
 	elemsize uint16
 	closed   uint32
 	elemtype *_type // element type
-	sendx    uint   // send index
-	recvx    uint   // receive index
+	sendx    uint   // send index  下一个可用的位置
+	recvx    uint   // receive index 下一个读取位置
 	recvq    waitq  // list of recv waiters 接收协程等待队列
 	sendq    waitq  // list of send waiters 发送协程等待队列
 
@@ -572,8 +573,14 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 #### recv
 
 1. 若channel不带缓冲，并且保存接收到的消息的地址不为空(ep !=nil)，则调用recvDirect
-2. channel带缓冲，从缓冲拷贝消息
-3. 因为有了空位，所以唤醒一个在`等待发送消息协程队列`中的协程
+2. channel带缓冲，从缓冲拷贝消息。并将等待发送的消息拷贝到缓冲中
+3. 唤醒一个在`等待发送消息协程队列`中的协程
+
+
+
+疑问：
+
+c.sendx 为什么更新为c.recvx
 
 ~~~go
 // recv processes a receive operation on a full channel c.
@@ -620,6 +627,7 @@ func recv(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func()) {
 		if c.recvx == c.dataqsiz {
 			c.recvx = 0
 		}
+        //c.sendx 为什么更新为c.recvx
 		c.sendx = c.recvx // c.sendx = (c.sendx+1) % c.dataqsiz
 	}
 	sg.elem = nil
