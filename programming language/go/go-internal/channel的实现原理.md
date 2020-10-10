@@ -1,14 +1,15 @@
-channel
+# channel
 
 [TOC]
 
 
 
-### channel 一些使用的注意事项
+### 使用channel 时的注意事项
 
 * **向空的channel发送消息，会阻塞但不会导致panic(简单的测试代码不行，可以检测到)**
 * 向已经关闭的channel发送消息，会导致panic
 * 关闭已经关闭或为空的channel导致panic
+* 关闭为nil的channel也会导致panic
 * **读取为空的channel也会阻塞，不会导致panic**
 * 读取已经关闭的channel，会读取到对应类型的0值
 
@@ -16,11 +17,12 @@ channel
 
 #### 注意
 
-* <font color="red">对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值。仍会读取到在队列的消息</font>
-* 协程因等待接收或发送消息进入等待状态。因channel关闭或可以接收、发送消息被唤醒
+* <font color="red">对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值。**通过分析代码，可以看到channel关闭后仍会先去读取到在队列的消息**</font>
+* 协程因等待接收或发送消息进入等待状态。因channel被关闭或接收、发送消息条件满足被唤醒
 * 进入等待队列的协程，都是拿到消息或发送消息成功后，才被唤醒
+* 多个协程等待同一个消息，遵循的是FIFO(先到先得)原则
 
-
+写这些东西都是给自己看的，一方面帮助自己整理学习过的内容，另一方面记录自己对问题的思考。所以自己多看看
 
 
 
@@ -125,12 +127,12 @@ func makechan(t *chantype, size int64) *hchan {
 
 1.  若channel为nil,则阻塞
 2. 检查channel是否已经关闭,若已经关闭则panic；
-3. 查看`等待接收消息的协程队列`，若有协程等待消息，则调用send, 然后返回。
+3. **查看`等待接收消息的协程队列`，若有协程等待消息(说明channel要么不带缓冲；要么带缓冲，但缓冲中没有消息)，则将sg移出等待队列，并调用send将消息拷贝到等待消息的协程的空间上并唤醒等待协程, 然后返回**。
 4. 检查channel的缓冲是否有空间，若还有空间则将消息放到缓冲中,然后返回。
 5. 若缓冲没有空间，则将发送协程放入等待队列并进入等待状态
 6. 被唤醒，若gp.param为nil，且hchan.closed为true,因为channel关闭被唤醒，panic；若gp.param不为nil,则说明发送消息成功
 
-
+上面第三步是个小优化，节省了放入channel缓冲这一步。一步到位
 
 ##### 非阻塞模式发送消息
 
@@ -224,8 +226,8 @@ func chansend(t *chantype, c *hchan, ep unsafe.Pointer, block bool, callerpc uin
 		panic(plainError("send on closed channel"))
 	}
 
-    //有gorutine等待消息时，直接拷贝到对应的gorutine上
-    //假如有多个gorutine在等待。则第一个先等到消息
+    //有协程等待接收消息时，直接拷贝到对应的协程上
+    //假如有多个gorutine在等待。则第一个先等到消息。能执行这要么channel没缓冲，要么缓冲内没消息所以可以节省放到缓冲这一步。
 	if sg := c.recvq.dequeue(); sg != nil {
 		// Found a waiting receiver. We pass the value we want to send
 		// directly to the receiver, bypassing the channel buffer (if any).
@@ -260,6 +262,7 @@ func chansend(t *chantype, c *hchan, ep unsafe.Pointer, block bool, callerpc uin
 		return false
 	}
 
+    //以上条件都不满足，获取sg并放入发送协程等待队列，进入等待状态
 	// Block on the channel. Some receiver will complete our operation for us.
 	gp := getg()
 	mysg := acquireSudog()
@@ -280,13 +283,14 @@ func chansend(t *chantype, c *hchan, ep unsafe.Pointer, block bool, callerpc uin
     //疑问: 切换当前goroutine后，被切换的仍在p的运行队列中么？？？？？？？？
 	goparkunlock(&c.lock, "chan send", traceEvGoBlockSend, 3)
 
+    //发送协程被唤醒
 	// someone woke us up.
 	if mysg != gp.waiting {
 		throw("G waiting list is corrupted")
 	}
 	gp.waiting = nil
 	if gp.param == nil {
-        //什么时候触发这个
+        //什么时候gp.param是nil 且c.closed是0
 		if c.closed == 0 {
 			throw("chansend: spurious wakeup")
 		}
@@ -339,10 +343,12 @@ func send(c *hchan, sg *sudog, ep unsafe.Pointer, unlockf func()) {
 			c.sendx = c.recvx // c.sendx = (c.sendx+1) % c.dataqsiz
 		}
 	}
+    //从ep拷贝消息到接收协程
 	if sg.elem != nil {
 		sendDirect(c.elemtype, sg, ep)
 		sg.elem = nil
 	}
+    //唤醒等待接收消息的协程， 注意gp.param
 	gp := sg.g
 	unlockf()
 	gp.param = unsafe.Pointer(sg)
@@ -384,7 +390,7 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 
 ###  接收消息
 
-下面的消息队列即channel所带的缓冲
+下面提到的消息队列即channel所带的缓冲
 
 #### 阻塞模式接收消息
 
@@ -392,8 +398,8 @@ func sendDirect(t *_type, sg *sudog, src unsafe.Pointer) {
 
 1. 若channel为nil，则阻塞
 2. 若通道已经关闭，且消息队列中没有消息，返回对应元素的0值；
-3. 消息发送协程等待队列不为空，则调用recv从发送协程处直接接收消息；
-4. 消息队列不为空,从消息队列中取消息，完成；
+3. **消息发送协程等待队列不为空。分两种情况，1）channel 不带缓冲，则调用recv从发送协程处直接接收消息；2) channel 带缓冲，说明缓冲已满，则从缓冲中取第一个消息，并将发送协程发送的消息拷贝到空闲插槽，并唤醒发送协程。**
+4. 消息队列不为空,从消息队列中取消息，然后返回；
 5. 将接收协程 放入消息等待队列，并进入等待状态
 6. 被唤醒后，根据gp.param是否为nil确定被唤醒的原因。若gp.param是nil则表示因channel关闭被唤醒。若不为nil,则表示因接收到消息被唤醒
 
@@ -478,7 +484,7 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 
 	lock(&c.lock)
 
-    //通道已经关闭 且缓冲为空
+    //通道已经关闭 且缓冲为空,读取0值
 	if c.closed != 0 && c.qcount == 0 {
 		if raceenabled {
 			raceacquire(unsafe.Pointer(c))
@@ -573,14 +579,14 @@ func chanrecv(t *chantype, c *hchan, ep unsafe.Pointer, block bool) (selected, r
 #### recv
 
 1. 若channel不带缓冲，并且保存接收到的消息的地址不为空(ep !=nil)，则调用recvDirect
-2. channel带缓冲，从缓冲拷贝消息。并将等待发送的消息拷贝到缓冲中
+2. 若channel带缓冲，从缓冲拷贝消息到接收协程的空间上。并将等待发送的消息拷贝到缓冲中
 3. 唤醒一个在`等待发送消息协程队列`中的协程
 
 
 
 疑问：
 
-c.sendx 为什么更新为c.recvx
+c.sendx 为什么更新为c.recvx。 能执行到这里，说明缓冲已满。更新c.sendx即使得c.recvx和c.sendx都指向队列头部，实际上c.sendx也不会被使用，因为队列满
 
 ~~~go
 // recv processes a receive operation on a full channel c.
