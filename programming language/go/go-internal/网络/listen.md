@@ -4,6 +4,27 @@
 
 
 
+##### Listener的定义
+
+~~~go
+// A Listener is a generic network listener for stream-oriented protocols.
+//
+// Multiple goroutines may invoke methods on a Listener simultaneously.
+type Listener interface {
+	// Accept waits for and returns the next connection to the listener.
+	Accept() (Conn, error)
+
+	// Close closes the listener.
+	// Any blocked Accept operations will be unblocked and return errors.
+	Close() error
+
+	// Addr returns the listener's network address.
+	Addr() Addr
+}
+~~~
+
+
+
 ##### Listen
 
 net/dial.go
@@ -179,7 +200,7 @@ func socket(ctx context.Context, net string, family, sotype, proto int, ipv6only
 
 
 
-##### sysSocket
+##### sysSocket 创建套接字
 
 net/sock_cloexec.go
 
@@ -228,7 +249,7 @@ func sysSocket(family, sotype, proto int) (int, error) {
 
 net/hook_unix.go
 
-~~~
+~~~go
 var (
 	testHookDialChannel  = func() {} // for golang.org/issue/5349
 	testHookCanceledDial = func() {} // for golang.org/issue/16523
@@ -249,9 +270,9 @@ var (
 
 sock_linux.go
 
-* listenerBacklog 要么从/proc获取，要么返回默认值syscall.SOMAXCONN
-
-* syscall.SOMACONN 定义在syscall/zerrors_linux_386.go文件中，0x80
+* listenerBacklog 要么从/proc/sys/net/core/somaxconn获取，要么返回默认值syscall.SOMAXCONN
+* syscall.SOMACONN 定义在syscall/zerrors_linux_386.go文件中，即128
+* listenerBacklog最大是65535
 
 ~~~go
 func maxListenerBacklog() int {
@@ -395,9 +416,12 @@ type pollDesc struct {
 
 net/fd_poll_runtime.go
 
-* 调用runtime_pollServerInit(runtime/netpoll.go )初始化轮询器
+* <font color="red">调用runtime_pollServerInit(runtime/netpoll.go )初始化轮询器,该初始化只会执行一次。也意味着全局只有一个epoll文件描述符</font>
+* 调用runtime_pollOpen会将`文件描述符`添加到epoll中, runtime_pollOpen返回的ctx实际是一个指向runtime.pollDesc结构的指针
 
 ~~~go
+var serverInit sync.Once
+
 func (pd *pollDesc) init(fd *netFD) error {
 	serverInit.Do(runtime_pollServerInit)
 	ctx, errno := runtime_pollOpen(uintptr(fd.sysfd))

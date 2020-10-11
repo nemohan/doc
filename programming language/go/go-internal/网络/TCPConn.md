@@ -1,4 +1,4 @@
-# tcp 链接
+# TCPConn
 
 [TOC]
 
@@ -9,6 +9,8 @@
 net/net.go
 
 Conn是一个接口类型，定义了一些通用的接口
+
+* Conn.Close实际调用的是conn.Close
 
 ~~~go
 // Conn is a generic stream-oriented network connection.
@@ -111,6 +113,24 @@ net/net.go
 ~~~go
 type conn struct {
 	fd *netFD
+}
+~~~
+
+
+
+##### conn.Close
+
+~~~go
+// Close closes the connection.
+func (c *conn) Close() error {
+	if !c.ok() {
+		return syscall.EINVAL
+	}
+	err := c.fd.Close()
+	if err != nil {
+		err = &OpError{Op: "close", Net: c.fd.net, Source: c.fd.laddr, Addr: c.fd.raddr, Err: err}
+	}
+	return err
 }
 ~~~
 

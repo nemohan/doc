@@ -100,6 +100,43 @@ func (fd *netFD) init() error {
 
 
 
+##### netFD.Close
+
+net/fd_unix.go
+
+~~~go
+func (fd *netFD) Close() error {
+	if !fd.fdmu.increfAndClose() {
+		return errClosing
+	}
+	// Unblock any I/O.  Once it all unblocks and returns,
+	// so that it cannot be referring to fd.sysfd anymore,
+	// the final decref will close fd.sysfd. This should happen
+	// fairly quickly, since all the I/O is non-blocking, and any
+	// attempts to block in the pollDesc will return errClosing.
+	fd.pd.evict()
+	fd.decref()
+	return nil
+}
+~~~
+
+
+
+##### netFD.destroy
+
+~~~
+func (fd *netFD) destroy() {
+	// Poller may want to unregister fd in readiness notification mechanism,
+	// so this must be executed before closeFunc.
+	fd.pd.close()
+	closeFunc(fd.sysfd)
+	fd.sysfd = -1
+	runtime.SetFinalizer(fd, nil)
+}
+~~~
+
+
+
 ##### netFD.readLock 读锁
 
 net/fdMutex.go

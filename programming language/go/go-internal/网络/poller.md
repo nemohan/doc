@@ -70,7 +70,9 @@ func (pd *pollDesc) prepare(mode int) error {
 
 
 
-##### waitRead 等待数据可读
+
+
+##### pollDesc.waitRead 等待数据可读
 
 net/fd_poll_runtime.go
 
@@ -82,13 +84,68 @@ func (pd *pollDesc) waitRead() error {
 
 
 
-##### wait
+##### pollDesc.wait
+
+[<sup>net_runtime_pollWait</sup>](#net_runtime_pollWait)
+
+* 实际调用runtime.net_runtime_pollWait
 
 ~~~go
 
 func (pd *pollDesc) wait(mode int) error {
 	res := runtime_pollWait(pd.runtimeCtx, mode)
 	return convertErr(res)
+}
+~~~
+
+
+
+##### pollDesc.evict 调用conn.Close会执行到这里
+
+~~~go
+// Evict evicts fd from the pending list, unblocking any I/O running on fd.
+func (pd *pollDesc) evict() {
+	if pd.runtimeCtx == 0 {
+		return
+	}
+	runtime_pollUnblock(pd.runtimeCtx)
+}
+~~~
+
+
+
+##### pollDesc.close 会被谁调用
+
+net/fd_poll_runtime.go
+
+* netFD.destroy会调用pollDesc.close，谁又调用netFD.destroy
+
+~~~go
+func (pd *pollDesc) close() {
+	if pd.runtimeCtx == 0 {
+		return
+	}
+	runtime_pollClose(pd.runtimeCtx)
+	pd.runtimeCtx = 0
+}
+~~~
+
+
+
+##### convertErr
+
+~~~go
+func convertErr(res int) error {
+	switch res {
+	case 0:
+		return nil
+	case 1:
+		return errClosing
+	case 2:
+		return errTimeout
+	}
+	println("unreachable: ", res)
+	panic("unreachable")
 }
 ~~~
 
@@ -178,6 +235,8 @@ var (
 
 
 
+对每个新建的套接字，不论是监听套接字还是接收而来的套接字，都会调用一次runtime_pollOpen
+
 #####  net_runtime_pollServerInit 调用平台的poller初始化接口，初始化poller
 
 runtime/netpoll.go
@@ -204,7 +263,9 @@ func netpollinited() bool {
 
 runtime/netpoll.go
 
-* 
+* 调用pollcache.alloc分配pollDesc
+* 初始化新分配的pollDesc
+* 调用netpollopen,将`文件描述符`添加到epoll中
 
 ~~~go
 //go:linkname net_runtime_pollOpen net.runtime_pollOpen
@@ -256,9 +317,34 @@ func net_runtime_pollReset(pd *pollDesc, mode int) int {
 
 
 
+##### net_runtime_pollClose 主动关闭
+
+runtime/netpoll.go
+
+~~~go
+//go:linkname net_runtime_pollClose net.runtime_pollClose
+func net_runtime_pollClose(pd *pollDesc) {
+	if !pd.closing {
+		throw("netpollClose: close w/o unblock")
+	}
+	if pd.wg != 0 && pd.wg != pdReady {
+		throw("netpollClose: blocked write on closing descriptor")
+	}
+	if pd.rg != 0 && pd.rg != pdReady {
+		throw("netpollClose: blocked read on closing descriptor")
+	}
+	netpollclose(pd.fd)
+	pollcache.free(pd)
+}
+~~~
+
+
+
 ##### netpollcheckerr  检查pd是否关闭或超时
 
 runtime/netpoll.go
+
+* 超时后没有重置pd.rd，若后续也没有重置超时时间，则pd.rd会一直小于0。导致后续读取返回超时错误
 
 ~~~go
 func netpollcheckerr(pd *pollDesc, mode int32) int {
@@ -278,7 +364,12 @@ func netpollcheckerr(pd *pollDesc, mode int32) int {
 
 ##### net_runtime_pollWait
 
+ <div id="net_runtime_pollWait"></div>
+
 runtime/netpoll.go
+
+* 调用netpollcheckerr
+* 调用netpollblock, 若netpollblock返回false说明IO仍未就绪
 
 ~~~go
 //go:linkname net_runtime_pollWait net.runtime_pollWait
@@ -291,6 +382,7 @@ func net_runtime_pollWait(pd *pollDesc, mode int) int {
 	if GOOS == "solaris" {
 		netpollarm(pd, mode)
 	}
+    //netpollblock说明IO仍未就绪
 	for !netpollblock(pd, int32(mode), false) {
 		err = netpollcheckerr(pd, int32(mode))
 		if err != 0 {
@@ -306,9 +398,22 @@ func net_runtime_pollWait(pd *pollDesc, mode int) int {
 
 
 
-##### netpollblock
+##### netpollblock 使协程进入等待
 
 runtime/netpoll.go
+
+返回值：
+
+* 返回true, 若IO就绪
+* 返回false，若超时或文件描述符被关闭
+
+
+
+执行过程：
+
+* 设置pd的状态为pdWait
+* <font color="red">若waitio是true,或netpollcheckerr返回0，则进入等待状态。进入等待状态时,pd.rg或pd.wg保存了指向当前协程的g结构体的指针</font>
+* 被唤醒后，检查pd的状态
 
 ~~~go
 // returns true if IO is ready, or false if timedout or closed
@@ -330,7 +435,9 @@ func netpollblock(pd *pollDesc, mode int32, waitio bool) bool {
 		if old != 0 {
 			throw("netpollblock: double wait")
 		}
-        //再次检查状态
+        //再次检查状态, CAS 若内存位置的值和指定的值一样，则将内存位置的值替换为新值，并返回内存位置现在的值
+        //若gpp原值是0，则新值是pdWait.就会跳出循环
+        //若gpp原值不是0，则原值保持不变，也会跳出循环
 		if atomic.Casuintptr(gpp, 0, pdWait) {
 			break
 		}
@@ -339,6 +446,7 @@ func netpollblock(pd *pollDesc, mode int32, waitio bool) bool {
 	// need to recheck error states after setting gpp to WAIT
 	// this is necessary because runtime_pollUnblock/runtime_pollSetDeadline/deadlineimpl
 	// do the opposite: store to closing/rd/wd, membarrier, load of rg/wg
+    //若pd已经被关闭，则netpollcheckerr返回1，超时返回2，否则返回0
 	if waitio || netpollcheckerr(pd, mode) == 0 {
 		gopark(netpollblockcommit, unsafe.Pointer(gpp), "IO wait", traceEvGoBlockNet, 5)
 	}
@@ -398,7 +506,9 @@ func netpollready(gpp *guintptr, pd *pollDesc, mode int32) {
 
 
 
-##### netpollunblock 就绪2--
+##### netpollunblock 使等待IO的协程就绪
+
+* 若协程处于等待读的状态，则pd.rg保存的是指向g的指针
 
 runtime/netpoll.go
 
@@ -411,15 +521,18 @@ func netpollunblock(pd *pollDesc, mode int32, ioready bool) *g {
 
 	for {
 		old := *gpp
+        //若pd.rg指向等待的协程的g,则不满足这
 		if old == pdReady {
 			return nil
 		}
+        //不满足
 		if old == 0 && !ioready {
 			// Only set READY for ioready. runtime_pollWait
 			// will check for timeout/cancel before waiting.
 			return nil
 		}
 		var new uintptr
+       
 		if ioready {
 			new = pdReady
 		}
@@ -439,12 +552,21 @@ func netpollunblock(pd *pollDesc, mode int32, ioready bool) *g {
 
 ##### net_runtime_pollSetDeadline 设置读写的超时时间
 
+参数:
+
+* d 以纳秒为单位的绝对时间
+
 runtime/netpoll.go
 
-* 调用addtimer添加定时器到定时器队列
-* 若设置的超时时间未过去的某个时间点，则
+* 加锁,pd.lock
 
-疑问: 只设置
+* 检查pd是否被关闭,若被关闭，立即返回
+* 增加定时器使用的序列号,取消之前设置定时器
+
+* <font color="red">若超时时间是未来的某个时间，调用addtimer添加定时器到定时器队列</font>
+* <font color="red">若设置的超时时间是过去的某个时间点，则调用netpollunblock唤醒等待的协程</font>
+
+疑问: 只设置读取的超时时间，为何会重置写入的超时时间
 
 ~~~go
 //go:linkname net_runtime_pollSetDeadline net.runtime_pollSetDeadline
@@ -537,6 +659,8 @@ func netpollReadDeadline(arg interface{}, seq uintptr) {
 ##### netpolldeadlineimpl 就绪等待IO的协程
 
 runtime/netpoll.go
+
+* 根据定时器的序列，检查该定时器是否是过时的
 
 ~~~go
 func netpolldeadlineimpl(pd *pollDesc, seq uintptr, read, write bool) {
@@ -662,7 +786,7 @@ func (c *pollCache) alloc() *pollDesc {
 
 
 
-##### netpollinit
+##### netpollinit 创建epoll使用的文件描述符
 
 runtime/netpoll_epoll.go
 

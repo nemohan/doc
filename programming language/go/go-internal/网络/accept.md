@@ -45,10 +45,12 @@ func (ln *TCPListener) accept() (*TCPConn, error) {
 
 net/fd_unix.go
 
+* 加读锁fd.readLock
+
 * 为什么调用pd.prepareRead, 做一些检查
 
 * 监听的套接字已被设置为非阻塞，调用accept会返回syscall.EAGAIN错误，转而调用fd.pd.waitRead使得当前协程进入等待状态
-* 为新链接创建netFD并初始化
+* 调用newFD为新链接创建netFD, 然后调用netfd.init添加`文件描述符`到epoll中
 * 
 
 ~~~go
@@ -81,11 +83,11 @@ func (fd *netFD) accept() (netfd *netFD, err error) {
 				// Accept()ed it; it's a silly error,
 				// so try again.
 				continue
-			}
+			}//end switch
 			return nil, err
-		}
+		}//end if
 		break
-	}
+	}//end for
 
 	if netfd, err = newFD(s, fd.family, fd.sotype, fd.net); err != nil {
 		closeFunc(s)
