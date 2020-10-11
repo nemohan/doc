@@ -118,7 +118,7 @@ func (pd *pollDesc) evict() {
 
 net/fd_poll_runtime.go
 
-* netFD.destroy会调用pollDesc.close，谁又调用netFD.destroy
+* netFD.destroy会调用pollDesc.close，谁又调用netFD.destroy。netFD.decref会调用
 
 ~~~go
 func (pd *pollDesc) close() {
@@ -702,13 +702,16 @@ func netpolldeadlineimpl(pd *pollDesc, seq uintptr, read, write bool) {
 
 
 
-##### net_runtime_pollUnblock
+##### net_runtime_pollUnblock 
 
 runtime/netpoll.go
 
 netFD被关闭时会调用此函数
 
-
+* 若已经被关闭，则报错
+* 设置pd.closing并增加序列号
+* 删除读/写设置的超时定时器
+* 唤醒正在等待的协程
 
 ~~~go
 //go:linkname net_runtime_pollUnblock net.runtime_pollUnblock

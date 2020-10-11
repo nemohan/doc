@@ -124,7 +124,9 @@ func (fd *netFD) Close() error {
 
 ##### netFD.destroy
 
-~~~
+net/fd_unix.go
+
+~~~go
 func (fd *netFD) destroy() {
 	// Poller may want to unregister fd in readiness notification mechanism,
 	// so this must be executed before closeFunc.
