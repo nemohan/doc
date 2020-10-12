@@ -1,31 +1,5 @@
 # mcall 
 
-
-
-
-
-
-
-~~~assembly
-
-
-~~~
-
-
-
-
-
-
-
-~~~go
-
-
-~~~
-
-
-
-
-
 ~~~go
 // Puts the current goroutine into a waiting state and calls unlockf.
 // If unlockf returns false, the goroutine is resumed.
