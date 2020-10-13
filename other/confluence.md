@@ -44,6 +44,49 @@
 
 使用上面的命令，数据和confluence.cfg.xml就一起保存到云盘上。
 
+
+
+
+
+## 密码重置
+
+1. 运行此sql 找到你的管理员帐户：
+
+ ~~~sql
+select u.id, u.user_name, u.active from cwd_user u  
+join cwd_membership m on u.id=m.child_user_id 
+join cwd_group g on m.parent_id=g.id 
+join cwd_directory d on d.id=g.directory_id  
+where g.group_name = 'confluence-administrators' 
+and d.directory_name='Confluence Internal Directory';
+ ~~~
+
+
+
+2. 运行此sql, 恢复管理员密码为 **admin**
+
+ ~~~sql
+update cwd_user 
+set credential =  
+'x61Ey612Kl2gpFL56FT9weDnpSo4AV8j8+qx2AuTHdRyY036xxzTTrw10Wq3+4qQyB+XURPWx1ONxp3Y3pB37A=='  
+where id=xxxxxx;
+ ~~~
+
+
+
+
+
+ 如果你的密码是**{PKCS5S2}**前缀开头的，则用下面这个sql:
+
+~~~sql
+update cwd_user 
+set credential =  
+'{PKCS5S2}ltrb9LlmZ0QDCJvktxd45WgYLOgPt2XTV8X7av2p0mhPvIwofs9bHYVz2OXQ6/kF'  
+where id=xxxxxx;  
+~~~
+
+ 这个管理员密码为 **Ab123456**
+
 ## 总结
 
 * 没有/mnt/wiki_data/atlassian/confluence/confluence.cfg.xml 这个文件，应该会导致confluence重新走安装流程
