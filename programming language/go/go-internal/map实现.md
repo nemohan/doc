@@ -1,4 +1,4 @@
-# 1map 的实现
+# map 的实现
 
 [TOC]
 
@@ -60,6 +60,29 @@
 一些常量定义:
 
 ~~~go
+const (
+	// Maximum number of key/value pairs a bucket can hold.
+	bucketCntBits = 3
+	bucketCnt     = 1 << bucketCntBits
+
+	// Maximum average load of a bucket that triggers growth.
+	loadFactor = 6.5
+
+	// Maximum key or value size to keep inline (instead of mallocing per element).
+	// Must fit in a uint8.
+	// Fast versions cannot handle big values - the cutoff size for
+	// fast versions in ../../cmd/internal/gc/walk.go must be at most this value.
+	maxKeySize   = 128
+	maxValueSize = 128
+
+	// data offset should be the size of the bmap struct, but needs to be
+	// aligned correctly. For amd64p32 this means 64-bit alignment
+	// even though pointers are 32 bit.
+	dataOffset = unsafe.Offsetof(struct {
+		b bmap
+		v int64
+	}{}.v)
+
 	// Possible tophash values. We reserve a few possibilities for special marks.
 	// Each bucket (including its overflow buckets, if any) will have either all or none of its
 	// entries in the evacuated* states (except during the evacuate() method, which only happens
@@ -69,9 +92,19 @@
 	evacuatedX     = 2 // key/value is valid.  Entry has been evacuated to first half of larger table.
 	evacuatedY     = 3 // same as above, but evacuated to second half of larger table.
 	minTopHash     = 4 // minimum tophash for a normal filled cell.
+
+	// flags
+	iterator     = 1 // there may be an iterator using buckets
+	oldIterator  = 2 // there may be an iterator using oldbuckets
+	hashWriting  = 4 // a goroutine is writing to the map
+	sameSizeGrow = 8 // the current map growth is to a new map of the same size
+
+	// sentinel bucket ID for iterator checks
+	noCheck = 1<<(8*sys.PtrSize) - 1
+)
 ~~~
 
-### 总结
+## 总结
 
 map的大致结构
 
@@ -79,15 +112,16 @@ map的大致结构
 
 有意思的两点:
 
-* bucket的存储方式, go的map实现为什么不采用`单链表`来解决冲突。
-* rehash。rehash是通过增量方式完成的。 查找时，时根据当前bucket是否完成迁移确定在新哈希表还是旧哈希表中查找`key`；添加时则总在新哈希表中添加，插入过程会不断的推进bucket的迁移。删除时，会先检查是否正在进行rehash。若正在进行rehash则先迁移被删除的`key`所在的bucket，然后再删除;
-* 原本有大量删除元素时，为什么不减小哈希表的大小来回收空间这样的疑问？因为go的GC会自动回收不使用的内存，所以就没必要了
+* bucket的存储方式, go的map实现为什么不采用`单链表`来解决冲突。而是采用类似于数组块的bmap
+* 什么时候触发rehash。只有插入key-value时， 且满足一定的条件，就会触发rehash
+* rehash。rehash是通过增量方式完成的。 查找时，根据当前bucket是否完成迁移确定在新哈希表还是旧哈希表中查找`key`；添加时则总在新哈希表中添加，插入过程会不断的推进bucket的迁移；删除时，会先检查是否正在进行rehash。若正在进行rehash则先迁移被删除的`key`所在的bucket，然后再删除;
+* <font color="red">**有个这样的疑问，即有大量删除元素时，为什么不减小哈希表的大小来回收空间这？仔细阅读代码之后才发现，大量删除元素不会有bmap被单独释放。而是通过调整哈希表(哈希表大小不变），来释放整个哈希表，已达到释放大量空闲bmap的目的**</font>
+
+## 实现
 
 
 
-### 基本操作
-
-
+### hmap的定义
 
 ~~~go
 // A header for a Go map.
@@ -117,9 +151,7 @@ type hmap struct {
 }
 ~~~
 
-
-
-##### 创建map
+### makemap 创建map
 
 ~~~go
 // makemap implements a Go map creation make(map[k]v, hint)
@@ -206,20 +238,20 @@ func makemap(t *maptype, hint int64, h *hmap, bucket unsafe.Pointer) *hmap {
 }
 ~~~
 
-
-
-##### mapassign 插入元素
+### mapassign 插入元素
 
 mapassign 会返回待插入value的内存位置
 
 bucket 的结构： hash(key)| hash(key2) | key| key2 | value| value2
 
-* 1检测hashWriting标志位是否被设置，若设置则panic(并发写)。否则设置hashWriting标志位
-* 2 计算key的哈希值，并确定其将要存储的bucket
-* 3 检查是否正在重新哈希,若正在rehash。则将bucket从旧的哈希表迁移到新哈希表
-* 4 查找空闲槽位。找到后仍然需要遍历所有的bmap，以确当是否有重复的key
-* 5 若当前未正在调整哈希表， 且根据当前的loadFactor确定是否需要调整哈希表的大小
-* 若需要进行rehash,则跳到步骤2
+1. 检查hmap是否为nil,若为nil，则panic
+2. **检测hashWriting标志位是否被设置，若设置则panic(并发写)。否则设置hashWriting标志位**
+3. 计算key的哈希值，使用的哈希函数依赖于key的类型，并确定其将要存储的bucket
+4. **检查是否正在重新哈希,若正在rehash。则将当前key所在的bucket从旧的哈希表迁移到新哈希表。然后再多迁移一个bucket,由hmap.nevacuate确定**
+5. 根据哈希值的最高8位，确定在bmap中的位置。查找空闲槽位。找到后仍然需要遍历所有的bmap，以确当是否有重复的key
+6. 若当前未正在调整哈希表， 且根据当前的loadFactor确定需要调整哈希表的大小,则调整哈希表大小
+7. 当前bucket没有空闲槽位，新分配一个bmap
+8. 若需要进行rehash,则跳到步骤2
 
 ~~~go
 // Like mapaccess, but allocates a slot for the key if it is not present in the map.
@@ -241,6 +273,7 @@ func mapassign(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 	}
 	h.flags |= hashWriting
 
+    //计算哈希值的函数是绑定在key上的
 	alg := t.key.alg
 	hash := alg.hash(key, uintptr(h.hash0))
 
@@ -256,6 +289,8 @@ again:
 		growWork(t, h, bucket)
 	}
 	b := (*bmap)(unsafe.Pointer(uintptr(h.buckets) + bucket*uintptr(t.bucketsize)))
+    
+    //高8位
 	top := uint8(hash >> (sys.PtrSize*8 - 8))
     //minTopHash的值是常量4
 	if top < minTopHash {
@@ -265,56 +300,68 @@ again:
 	var inserti *uint8
 	var insertk unsafe.Pointer
 	var val unsafe.Pointer
+    //有三种情况需要处理
+    //case 1，要么key存在于hmap中。
+    //case 2, key要不存在于hmap中，且bmap有空闲位置
+    //case 3, key 不存在于hmap中，且bmap没有空闲位置，需要增加bmap
 	for {
         //bucketCnt的值是常量8
 		for i := uintptr(0); i < bucketCnt; i++ {
 			if b.tophash[i] != top {
-                //找到空闲位置, 若找到了为啥还continue
+                //找到空闲位置, 若找到了为啥还continue？因为key冲突的存在，所以还需要检查其他槽位
 				if b.tophash[i] == empty && inserti == nil {
 					inserti = &b.tophash[i]
-					insertk = add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+					insertk = add(unsafe.Pointer(b),
+                                  dataOffset+i*uintptr(t.keysize))
                     //待插入value的内存位置
-					val = add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
+					val = add(unsafe.Pointer(b), 		  dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
 				}
 				continue
-			}
+			}//end if b.tophash[i] != top
+            
+            //下面就是哈希值冲突的情况,冲突时还需要确定key是否相等
+            
             //k 应该是key
 			k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
 			if t.indirectkey {
 				k = *((*unsafe.Pointer)(k))
 			}
-            //键是否相等, 不相等。哈希值相同但key不同
-            //若找到了一个空闲插槽，岂不是key 和k也不相同, inserti 也不为nil
-            //要继续遍历其他的bmap, 之所以这样。是因为有可能有相同的key在其他bmap中
+         	//哈希值冲突，但key不同。继续查找
 			if !alg.equal(key, k) {
 				continue
 			}
+            
+            //键已经存在的情况
 			// already have a mapping for key. Update it.
 			if t.needkeyupdate {
 				typedmemmove(t.key, k, key)
 			}
 			val = add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
 			goto done
-		}
+        }//end for i:= uintptr(0)
+        
+        //下一个bmap
 		ovf := b.overflow(t)
+        //所有的bmap都没有空位
 		if ovf == nil {
 			break
 		}
 		b = ovf
-	}
+	}//end for
 
 	// Did not find mapping for key. Allocate new cell & add entry.
 
 	// If we hit the max load factor or we have too many overflow buckets,
 	// and we're not already in the middle of growing, start growing.
     //没有在调整哈希表大小， 且满足以下两个条件之一
-    //1 
-    //overflow bucket没超过一定数量
+    //1 key的数目超过bucket数目的6.5倍
+    //2
 	if !h.growing() && (overLoadFactor(int64(h.count), h.B) || tooManyOverflowBuckets(h.noverflow, h.B)) {
 		hashGrow(t, h)
 		goto again // Growing the table invalidates everything, so try again
 	}
 
+    //当前bucket没有空闲槽位
 	if inserti == nil {
 		// all current buckets are full, allocate a new one.
 		newb := (*bmap)(newobject(t.bucket))
@@ -515,11 +562,31 @@ done:
 }
 ~~~
 
+### rehash 调整哈希表大小
 
 
-#### 调整哈希表大小
 
-#####  hashGrow 增大哈希表
+#### hmap.growing 确定是否正在进行rehash
+
+若hmap.oldbuckets不为nil,则正在进行rehash
+
+~~~go
+// growing reports whether h is growing. The growth may be to the same size or bigger.
+func (h *hmap) growing() bool {
+	return h.oldbuckets != nil
+}
+~~~
+
+
+
+#####  hashGrow 调整哈希表
+
+注意hmap.nevacuate和hmap.noverflow会被重置
+
+在负载因子没超过6.5倍，即key的数目时bucket数目的6.5倍时。仍然调整哈希表（大小不变)是因为bmap数量过多，使用新的哈希表可以释放过多的空闲bmap。所以bmap不是单独释放的而是通过调整哈希表，释放整个哈希表
+
+* 若负载没超过特定的值即loadFactor(6.5倍)，则不增大哈希表
+* 若负载超过loadFactor，则哈希表调整为原来的2倍大小
 
 ~~~go
 func hashGrow(t *maptype, h *hmap) {
@@ -561,17 +628,22 @@ func hashGrow(t *maptype, h *hmap) {
 
 
 
-##### growwork迁移策略
+##### growwork迁移bucket
 
-* 插入过程会调用此函数，推进bucket的迁移
+插入过程会调用此函数，推进bucket的迁移
+
+* 先迁移当前正在使用的bucket
+* 然后再迁移一个bucket
 
 ~~~go
 func growWork(t *maptype, h *hmap, bucket uintptr) {
 	// make sure we evacuate the oldbucket corresponding
 	// to the bucket we're about to use
+    //bucket参数是在新的哈希表中的位置，所以需要bucket &h.oldbucketmask()来确定其在旧哈希表中的位置
 	evacuate(t, h, bucket&h.oldbucketmask())
 
 	// evacuate one more oldbucket to make progress on growing
+    //nevacuate从0开始
 	if h.growing() {
 		evacuate(t, h, h.nevacuate)
 	}
@@ -777,11 +849,11 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 				memclrNoHeapPointers(add(unsafe.Pointer(b), dataOffset), uintptr(t.bucketsize)-dataOffset)
 			}
 		}
-	}
+	}//end if !evacuated
 
 	// Advance evacuation mark
     //h.nevacuate 的初始值是0
-    //清理完毕
+    //在以evacuate(t, h, h.nevacuate)调用时，oldbucket是等于h.nevacuate的,这样就会迁移下一个bucket
     //growWork 函数会调用evacuate(t, h, h.nevacuate),逐个清理
 	if oldbucket == h.nevacuate {
 		h.nevacuate = oldbucket + 1
@@ -802,7 +874,15 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 
 
 
-##### overLoadFactor 确定哈希表是否过载
+### 确定是否需要调整哈希表大小的因素
+
+插入key-value时，若满足如下两个条件中的任意一个，就调整哈希表的大小
+
+* key的数量超过8，并且key的数量超过bucket数目的6.5倍
+
+* 所有bucket的bmap数量超过一定的数值时
+
+#### overLoadFactor 确定哈希表是否过载
 
 若哈希表当前的元素数超过bucketCnt(8)并且 元素数是哈希表大小的loadFactor(6.5)倍。
 
@@ -811,6 +891,82 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 func overLoadFactor(count int64, B uint8) bool {
 	// TODO: rewrite to use integer math and comparison?
 	return count >= bucketCnt && float32(count) >= loadFactor*float32((uintptr(1)<<B))
+}
+~~~
+
+#### tooManyOverFlowBuckets
+
+* B小于16，所有bucket的bmap数量超过(1<<B)
+* B大于等于16时， 所有bucket的bmap数量超过32768。
+
+~~~go
+// tooManyOverflowBuckets reports whether noverflow buckets is too many for a map with 1<<B buckets.
+// Note that most of these overflow buckets must be in sparse use;
+// if use was dense, then we'd have already triggered regular map growth.
+func tooManyOverflowBuckets(noverflow uint16, B uint8) bool {
+	// If the threshold is too low, we do extraneous work.
+	// If the threshold is too high, maps that grow and shrink can hold on to lots of unused memory.
+	// "too many" means (approximately) as many overflow buckets as regular buckets.
+	// See incrnoverflow for more details.
+	if B < 16 {
+		return noverflow >= uint16(1)<<B
+	}
+	return noverflow >= 1<<15
+}
+~~~
+
+
+
+### 当bucket没有空闲槽位时
+
+hmap.noverflow的计算有点意思
+
+* 若h.B < 16,即bucket数目小于65536时，h.noverflow直接加1
+* 若h.B>16,
+
+~~~go
+// incrnoverflow increments h.noverflow.
+// noverflow counts the number of overflow buckets.
+// This is used to trigger same-size map growth.
+// See also tooManyOverflowBuckets.
+// To keep hmap small, noverflow is a uint16.
+// When there are few buckets, noverflow is an exact count.
+// When there are many buckets, noverflow is an approximate count.
+func (h *hmap) incrnoverflow() {
+	// We trigger same-size map growth if there are
+	// as many overflow buckets as buckets.
+	// We need to be able to count to 1<<h.B.
+	if h.B < 16 {
+		h.noverflow++
+		return
+	}
+	// Increment with probability 1/(1<<(h.B-15)).
+	// When we reach 1<<15 - 1, we will have approximately
+	// as many overflow buckets as buckets.
+	mask := uint32(1)<<(h.B-15) - 1
+	// Example: if h.B == 18, then mask == 7,
+	// and fastrand & 7 == 0 with probability 1/8.
+	if fastrand()&mask == 0 {
+		h.noverflow++
+	}
+}
+
+func (h *hmap) setoverflow(t *maptype, b, ovf *bmap) {
+	h.incrnoverflow()
+	if t.bucket.kind&kindNoPointers != 0 {
+		h.createOverflow()
+		*h.overflow[0] = append(*h.overflow[0], ovf)
+	}
+	*(**bmap)(add(unsafe.Pointer(b), uintptr(t.bucketsize)-sys.PtrSize)) = ovf
+}
+
+func (h *hmap) createOverflow() {
+	if h.overflow == nil {
+		h.overflow = new([2]*[]*bmap)
+	}
+	if h.overflow[0] == nil {
+		h.overflow[0] = new([]*bmap)
+	}
 }
 ~~~
 
