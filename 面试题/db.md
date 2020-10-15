@@ -43,6 +43,68 @@
 
 ### redis缓存策略
 
+#### Cache-aside(lazy-loading 延迟加载)
+
+基本的数据获取的逻辑总结如下:
+
+1. 当应用程序需要从数据库读取数据时，先检查缓存确定数据是否可用
+2. 若数据在缓存中(cache hit),返回缓存中的数据
+3. 若数据不在缓存中(cache miss)，则从数据库读取数据，然后将读取到的数据放入缓存中。最后将数据返回给应用程序
+
+##### 优势
+
+* 缓存只包含应用程序需要的数据，使得缓存大小更高效
+* 实现简单
+
+##### 劣势
+
+缓存未命中时，比较慢
+
+#### Write-Back(Write-behind) 回写
+
+数据先写入缓存，然后异步的将数据更新到数据存储
+
+#### Write-Through(透写)
+
+基本的数据获取逻辑如下：
+
+1. 应用程序或其他后端进程先更新数据库
+2. 然后，数据更新到缓存
+
+##### 优势
+
+* 缓存和数据库保持同步，缓存命中的概率更大，反过来会提升应用性能和用户体验
+* 减少数据库读取
+
+##### 劣势
+
+不被经常使用的数据也会写入到缓存，导致缓存更大
+
+
+
+#### 总结
+
+延迟加载和透写一般一起使用
+
+
+
+### 缓存淘汰机制 (Evictions )
+
+ least frequently used: 最少频繁使用，应该是访问次数最少即访问不频繁，访问次数少的优先淘汰？
+
+ least recently used: 最近最少使用。应该是以key的最后的访问时间为标准么,最久未访问的优先淘汰？
+
+| 淘汰机制        | 描述                             |
+| --------------- | -------------------------------- |
+| allkeys-lru     | 淘汰最久未访问的key              |
+| allkeys-lfu     | 淘汰访问次数最少的key            |
+| volatile-lru    | 淘汰设置了TTL的最久未访问的key   |
+| volatile-lfu    | 淘汰设置了TTL的访问次数最少的key |
+| volatile-ttl    | 淘汰TTL最小的key                 |
+| volatile-random | 随机淘汰一个设置了TTL的key       |
+| allkeys-random  | 随机淘汰一个key                  |
+| no-eviction     | 不淘汰                           |
+
 
 
 ## 参考
@@ -50,3 +112,4 @@
 ### redis
 
 * 雪崩、穿透、击穿 <https://baijiahao.baidu.com/s?id=1655304940308056733&wfr=spider&for=pc>
+* 缓存策略 https://d0.awsstatic.com/whitepapers/Database/database-caching-strategies-using-redis.pdf
