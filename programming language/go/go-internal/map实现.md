@@ -114,8 +114,23 @@ map的大致结构
 
 * bucket的存储方式, go的map实现为什么不采用`单链表`来解决冲突。而是采用类似于数组块的bmap
 * 什么时候触发rehash。只有插入key-value时， 且满足一定的条件，就会触发rehash
-* rehash。rehash是通过增量方式完成的。 查找时，根据当前bucket是否完成迁移确定在新哈希表还是旧哈希表中查找`key`；添加时则总在新哈希表中添加，插入过程会不断的推进bucket的迁移；删除时，会先检查是否正在进行rehash。若正在进行rehash则先迁移被删除的`key`所在的bucket，然后再删除;
-* <font color="red">**有个这样的疑问，即有大量删除元素时，为什么不减小哈希表的大小来回收空间这？仔细阅读代码之后才发现，大量删除元素不会有bmap被单独释放。而是通过调整哈希表(哈希表大小不变），来释放整个哈希表，已达到释放大量空闲bmap的目的**</font>
+* rehash。rehash是通过增量方式完成的。 查找时，根据当前bucket是否完成迁移确定在新哈希表还是旧哈希表中查找`key`；添加时若正在进行rehash，则先迁移当前key所在的bucket到新哈希表中,然后再多迁移一个bucket。所以总在新哈希表中添加，插入过程会不断的推进bucket的迁移；删除时，会先检查是否正在进行rehash。若正在进行rehash则先迁移被删除的`key`所在的bucket，然后再删除;
+* 查找和删除都会推动bucket的迁移
+* <font color="red">**有个这样的疑问，即有大量删除元素时，为什么不减小哈希表的大小来回收空间这？仔细阅读代码之后才发现，大量删除元素不会有bmap被单独释放。而是通过调整哈希表(哈希表大小不变），调整时所有bucket的键值对拷贝到新哈希表中（调整后新哈希表的bucket的bmap更加紧凑），来释放整个哈希表，已达到释放大量空闲bmap的目的**</font>
+
+
+
+假设某个bucket的bmap如下
+
+~~~
+迁移前
+bucket1 hash(key1)| empty|hash(key2)|....|key1|empty|key2|...|value1||value2|...
+
+迁移后：
+bucket1 hash(key1)|hash(key2)|...|key1|key2|...|value1|value2
+~~~
+
+
 
 ## 实现
 
@@ -150,6 +165,27 @@ type hmap struct {
 	overflow *[2]*[]*bmap
 }
 ~~~
+
+
+
+bmap
+
+~~~go
+// A bucket for a Go map.
+type bmap struct {
+	// tophash generally contains the top byte of the hash value
+	// for each key in this bucket. If tophash[0] < minTopHash,
+	// tophash[0] is a bucket evacuation state instead.
+	tophash [bucketCnt]uint8
+	// Followed by bucketCnt keys and then bucketCnt values.
+	// NOTE: packing all the keys together and then all the values together makes the
+	// code a bit more complicated than alternating key/value/key/value/... but it allows
+	// us to eliminate padding which would be needed for, e.g., map[int64]int8.
+	// Followed by an overflow pointer.
+}
+~~~
+
+
 
 ### makemap 创建map
 
@@ -249,9 +285,10 @@ bucket 的结构： hash(key)| hash(key2) | key| key2 | value| value2
 3. 计算key的哈希值，使用的哈希函数依赖于key的类型，并确定其将要存储的bucket
 4. **检查是否正在重新哈希,若正在rehash。则将当前key所在的bucket从旧的哈希表迁移到新哈希表。然后再多迁移一个bucket,由hmap.nevacuate确定**
 5. 根据哈希值的最高8位，确定在bmap中的位置。查找空闲槽位。找到后仍然需要遍历所有的bmap，以确当是否有重复的key
-6. 若当前未正在调整哈希表， 且根据当前的loadFactor确定需要调整哈希表的大小,则调整哈希表大小
-7. 当前bucket没有空闲槽位，新分配一个bmap
+6. <font color="red">**若当前未正在调整哈希表， 且满足下面两个条件之一，则调整哈希表大小：1）key的数量超过bucket数量的6.5倍(6.5由loadFactor定义),这种情况调整策略是哈希表变为原来的2倍；2）bmap的数量超过bucket数量（不十分准确），这种情况新哈希表的大小和原哈希表的大小一致**</font>
+7. 当前bucket没有空闲槽位，新分配一个bmap,并调整h.noverflow
 8. 若需要进行rehash,则跳到步骤2
+9. 返回存放value的内存位置
 
 ~~~go
 // Like mapaccess, but allocates a slot for the key if it is not present in the map.
@@ -397,9 +434,10 @@ done:
 }
 ~~~
 
+### mapaccess1 查找指定的key-value
 
-
-##### mapaccess1 查找
+* **若hmap为nil或没有key返回对应类型的0值**
+* 检查hashWriting标志位，若被设置说明存在并发读写，抛出异常
 
 * 首先计算key的哈希值，然后根据哈希值确定bucket
 * 根据当前是否正在rehash, 以及确定的bucket迁移是否完成确定在新哈希表还是旧哈希表中查找
@@ -423,6 +461,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 	if h == nil || h.count == 0 {
 		return unsafe.Pointer(&zeroVal[0])
 	}
+    //检查标志位
 	if h.flags&hashWriting != 0 {
 		throw("concurrent map read and map write")
 	}
@@ -433,18 +472,18 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
     
     //正在进行rehash
 	if c := h.oldbuckets; c != nil {
+        //确定新哈希表是否为原来的一倍
 		if !h.sameSizeGrow() {
 			// There used to be half as many buckets; mask down one more power of two.
 			m >>= 1
 		}
+        //key在旧哈希表中所在的bucket
 		oldb := (*bmap)(add(c, (hash&m)*uintptr(t.bucketsize)))
         
         //检查当前旧哈希表bucket是否迁移完成, 若完成则从新哈希表中的bucket中查找， 否则总旧哈希表中查找
          //若b.tophash[0] > empty && b.tophash[0] < minTopHash, 则evacuated返回true
     //反之就是empty, minTopHash, 正常的key就会执行if 逻辑
         //迁移完成会将b.tophash[0]设置成 evacuatedX, evacuated(oldb)就会返回true.从而不执行if
-        
-        
 		if !evacuated(oldb) {
 			b = oldb
 		}
@@ -456,6 +495,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 	}
 	for {
 		for i := uintptr(0); i < bucketCnt; i++ {
+            //哈希值的高8位是否相同
 			if b.tophash[i] != top {
 				continue
 			}
@@ -463,7 +503,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 			if t.indirectkey {
 				k = *((*unsafe.Pointer)(k))
 			}
-            //键是否相等
+            //键相等的情况
 			if alg.equal(key, k) {
 				v := add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
 				if t.indirectvalue {
@@ -472,6 +512,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 				return v
 			}
 		}
+        //检查下一个bmap
 		b = b.overflow(t)
 		if b == nil {
 			return unsafe.Pointer(&zeroVal[0])
@@ -480,13 +521,13 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 }
 ~~~
 
+### mapdelete 删除指定的key-value
 
-
-##### mapdelete 删除元素
+* 若hmap是nil或大小是0，则直接返回
 
 * 检测hashWriting标志位，若已经设置则panic(并发写)。否则设置hashWriting标志位
 * 计算`key`的哈希值，并获取所在的bucket
-* 检查是否正在rehash，若正在rehash则尝试将当前bucket从旧哈希表中迁移到新哈希表中
+* 检查是否正在rehash，若正在rehash则尝试将当前bucket从旧哈希表中迁移到新哈希表中,并再多迁移一个bucket
 * 在bucket中查找指定键
 * 检测hashWriting标志位，看是否已被清除若清除则panic(并发写)。否则清除hashWriting标志位
 
@@ -512,6 +553,7 @@ func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
 	alg := t.key.alg
 	hash := alg.hash(key, uintptr(h.hash0))
 	bucket := hash & (uintptr(1)<<h.B - 1)
+    //增量迁移
 	if h.growing() {
 		growWork(t, h, bucket)
 	}
@@ -522,6 +564,7 @@ func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
 	}
 	for {
 		for i := uintptr(0); i < bucketCnt; i++ {
+            //哈希值不等
 			if b.tophash[i] != top {
 				continue
 			}
@@ -530,20 +573,24 @@ func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
 			if t.indirectkey {
 				k2 = *((*unsafe.Pointer)(k2))
 			}
+            //键不等
 			if !alg.equal(key, k2) {
 				continue
 			}
+            //清空key
 			if t.indirectkey {
 				*(*unsafe.Pointer)(k) = nil
 			} else {
 				typedmemclr(t.key, k)
 			}
+            //清空value
 			v := unsafe.Pointer(uintptr(unsafe.Pointer(b)) + dataOffset + bucketCnt*uintptr(t.keysize) + i*uintptr(t.valuesize))
 			if t.indirectvalue {
 				*(*unsafe.Pointer)(v) = nil
 			} else {
 				typedmemclr(t.elem, v)
 			}
+            //哈希值置为empty,可用
 			b.tophash[i] = empty
 			h.count--
 			goto done
@@ -561,6 +608,10 @@ done:
 	h.flags &^= hashWriting
 }
 ~~~
+
+
+
+### 遍历
 
 ### rehash 调整哈希表大小
 
@@ -683,7 +734,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 			xv, yv unsafe.Pointer // pointers to current x and y value storage
 		)
         
-        //新哈希表管理的所有bitmap
+        //x指向新哈希表管理的第一个bitmap
 		x = (*bmap)(add(h.buckets, oldbucket*uintptr(t.bucketsize)))
 		xi = 0
 		xk = add(unsafe.Pointer(x), dataOffset)
@@ -713,7 +764,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
         5%8=5
         7%8=7
         */
-        //哈希表增大
+        //哈希表增大一倍
         //??????????????????????????, 确定新bucket的原因没搞明白
 		if !h.sameSizeGrow() {
 			// Only calculate y pointers if we're growing bigger.
@@ -742,7 +793,7 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 					k2 = *((*unsafe.Pointer)(k2))
 				}
 				useX := true
-                //新表比旧表大
+                //新哈希表是旧哈希表的2倍
 				if !h.sameSizeGrow() {
 					// Compute hash to make our evacuation decision (whether we need
 					// to send this key/value to bucket x or bucket y).
@@ -837,12 +888,13 @@ func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
 			}
 		}//end for
         
-        
+        //帮助gc
 		// Unlink the overflow buckets & clear key/value to help GC.
 		if h.flags&oldIterator == 0 {
 			b = (*bmap)(add(h.oldbuckets, oldbucket*uintptr(t.bucketsize)))
 			// Preserve b.tophash because the evacuation
 			// state is maintained there.
+            //清理存放key-value的内存
 			if t.bucket.kind&kindNoPointers == 0 {
 				memclrHasPointers(add(unsafe.Pointer(b), dataOffset), uintptr(t.bucketsize)-dataOffset)
 			} else {
