@@ -358,6 +358,8 @@ func (this *LRUCache) Put(key int, value int)  {
 **进阶：**
 你是否可以在 **O(1)** 时间复杂度内执行两项操作？
 
+
+
  
 
 **示例：**
@@ -377,8 +379,13 @@ cache.get(3);       // 返回 3
 cache.get(4);       // 返回 4
 ```
 
+#### 思路
 
+使用`哈希表`和`双向链表`可以解决LRU的问题。针对LFU（最近最不经常使用）根据元素的使用次数淘汰使用次数最少的元素，若两个元素的使用次数相同则淘汰最近最久未使用的。`双链表`的使用解决了在O(1)时间内找到最久未使用的元素。那么应该使用什么样的数据结构来在O(1)内找到使用次数最少的元素呢？
+
+对维护使用次数的数据结构，只关心能快速找到使用最多和使用次数最少的元素
 
 ### 参考
 
 * lru-cache https://www.interviewcake.com/concept/java/lru-cache 
+* LFU-cache  http://dhruvbird.com/lfu.pdf 
