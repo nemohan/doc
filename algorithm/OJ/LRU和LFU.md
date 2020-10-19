@@ -37,11 +37,21 @@ cache.get(4);       // 返回  4
 链接：https://leetcode-cn.com/problems/lru-cache
 著作权归领扣网络所有。商业转载请联系官方授权，非商业转载请注明出处。
 
+#### 总结
 
+在网上查了关于LRU的资料，找到一种使算法复杂度为O(1)的方法。这种方法使用`双链表`和`哈希表`，估计`哈希表`用来存放key-value，`双链表`按最近的使用情况存放信息。
+
+算法：
+
+* 添加一个key-value时，key-value的地址首先存入哈希表。然后放入双链表的首部
+* 访问某个key-value时，被访问的key-value移到`双链表`首部
+* 当需要移除`最近最少使用`的key-value时，直接移除`双链表`尾部的key-value
 
 #### 思路
 
 最初的思路就是`哈希表`加上`优先级队列`，只不过key-value的最近使用时间用的是time.Now().Unix()。使用time.Now().Unix()，会导致两个key的最近使用时间相同，因为Unix()返回的是以描述为单位的时间戳。因此使用一个整数序列表示逻辑时间
+
+#### hashmap + heap版本的实现
 
 ~~~go
 type node struct {
@@ -211,6 +221,127 @@ func getNow() int {
 
 
 
+#### 双链表 + 哈希表 版本
+
+~~~go
+
+
+type node struct{
+    key int
+    value int
+    prev *node
+    next *node
+}
+
+//non-circle double-link-list
+type list struct{
+    head *node
+    tail *node
+}
+
+type LRUCache struct {
+    cache map[int]*node
+    lruList list
+    size int
+    count int
+}
+
+func (l *list)addHead(pn *node){
+    if l.head == nil{
+        l.head = pn
+        l.tail = pn
+        return
+    }
+    l.head.prev = pn
+    pn.next = l.head
+    l.head = pn
+}
+
+func (l *list)moveToHead(pn *node){
+    if l.head == pn{
+        return
+    }
+
+    if l.tail == pn{
+        l.tail = pn.prev
+
+        pn.prev =nil
+        l.head.prev = pn
+        pn.next = l.head
+        l.head = pn
+        return
+    }
+    pn.prev.next = pn.next
+    pn.next.prev = pn.prev
+
+    pn.prev = nil
+    pn.next = l.head
+    l.head.prev = pn
+    l.head = pn
+}
+
+func (l *list)delTail()*node{
+    tail := l.tail
+    if tail == l.head{
+        l.tail = nil
+        l.head = nil
+        return tail
+    } 
+    l.tail = tail.prev
+    l.tail.next = nil
+    tail.prev = nil
+    return tail
+}
+
+func Constructor(capacity int) LRUCache {
+    return LRUCache{
+        size: capacity,
+        count: 0,
+        cache : make(map[int]*node, capacity),
+    }
+}
+
+
+func (this *LRUCache) Get(key int) int {
+    pn, ok := this.cache[key]
+    if !ok{
+        return -1
+    }
+    this.lruList.moveToHead(pn)
+    return pn.value
+
+}
+
+
+func (this *LRUCache) Put(key int, value int)  {
+    pn, ok := this.cache[key]
+    if ok{
+        pn.value =value
+        this.lruList.moveToHead(pn)
+        return
+    }
+    if this.count == this.size{
+        pn = this.lruList.delTail()
+        delete(this.cache,pn.key)
+        this.count--
+    }
+    pn = &node{key:key, value:value}
+    this.cache[key] = pn
+    this.lruList.addHead(pn)
+    this.count++
+}
+
+
+/**
+ * Your LRUCache object will be instantiated and called as such:
+ * obj := Constructor(capacity);
+ * param_1 := obj.Get(key);
+ * obj.Put(key,value);
+ */
+~~~
+
+
+
 #### [460. LFU缓存](https://leetcode-cn.com/problems/lfu-cache/)
 
 难度困难281收藏分享切换为英文接收动态反馈
@@ -245,3 +376,9 @@ cache.get(1);       // 返回 -1 (未找到 key 1)
 cache.get(3);       // 返回 3
 cache.get(4);       // 返回 4
 ```
+
+
+
+### 参考
+
+* lru-cache https://www.interviewcake.com/concept/java/lru-cache 
