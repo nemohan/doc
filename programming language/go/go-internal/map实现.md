@@ -168,7 +168,7 @@ type hmap struct {
 
 
 
-bmap
+### bmap的定义
 
 ~~~go
 // A bucket for a Go map.
@@ -345,6 +345,7 @@ again:
         //bucketCnt的值是常量8
 		for i := uintptr(0); i < bucketCnt; i++ {
 			if b.tophash[i] != top {
+                //被删除，导致有空闲位置在中间
                 //找到空闲位置, 若找到了为啥还continue？因为key冲突的存在，所以还需要检查其他槽位
 				if b.tophash[i] == empty && inserti == nil {
 					inserti = &b.tophash[i]
@@ -960,9 +961,11 @@ func tooManyOverflowBuckets(noverflow uint16, B uint8) bool {
 	// If the threshold is too high, maps that grow and shrink can hold on to lots of unused memory.
 	// "too many" means (approximately) as many overflow buckets as regular buckets.
 	// See incrnoverflow for more details.
+    //bucket 数目不超过64K
 	if B < 16 {
 		return noverflow >= uint16(1)<<B
 	}
+    //1<<15 即 noverflow 超过32K
 	return noverflow >= 1<<15
 }
 ~~~
@@ -971,10 +974,12 @@ func tooManyOverflowBuckets(noverflow uint16, B uint8) bool {
 
 ### 当bucket没有空闲槽位时
 
+##### hmap.incrnoverflow
+
 hmap.noverflow的计算有点意思
 
-* 若h.B < 16,即bucket数目小于65536时，h.noverflow直接加1
-* 若h.B>16,
+- 若h.B < 16,即bucket数目小于65536时，h.noverflow直接加1
+- 若h.B>16,
 
 ~~~go
 // incrnoverflow increments h.noverflow.
@@ -988,6 +993,7 @@ func (h *hmap) incrnoverflow() {
 	// We trigger same-size map growth if there are
 	// as many overflow buckets as buckets.
 	// We need to be able to count to 1<<h.B.
+    //bucket 数目不超过64k时，
 	if h.B < 16 {
 		h.noverflow++
 		return
@@ -1003,6 +1009,14 @@ func (h *hmap) incrnoverflow() {
 	}
 }
 
+
+~~~
+
+
+
+##### hmap.setoverflow
+
+~~~go
 func (h *hmap) setoverflow(t *maptype, b, ovf *bmap) {
 	h.incrnoverflow()
 	if t.bucket.kind&kindNoPointers != 0 {

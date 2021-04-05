@@ -42,6 +42,37 @@
 
 
 
+### 同时编辑多行
+
+如将下面代码
+
+~~~go
+Uint8
+Uint16
+Uint32
+Uint64
+Uint
+~~~
+
+改成下面模样：
+
+~~~go
+	case reflect.Uint:
+	case reflect.Uint8:
+	case reflect.Uint16:
+	case reflect.Uint32:
+	case reflect.Uint64:
+~~~
+
+
+
+可以按如下步骤操作:
+
+1. 按v 进入块或列模式
+2. 按 I 会跳到选中的块的每行的行首，输入case reflect.即可
+3. 按v进入块模式
+4. 按A会
+
 ## 执行shell命令
 
 不退出vi执行shell命令的方式，进入`命令行模式`,然后输入`!command`。这种方式对写python 脚本超nice

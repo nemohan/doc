@@ -463,6 +463,331 @@ static unsigned int sock_poll(struct file *file, poll_table *wait)
 
 
 
+## poll
+
+fs/select.c
+
+
+
+### poll系统调用的实现
+
+* 若超时时间大于等于0，调用poll_select_set_timeout
+* 调用do_sys_poll
+
+~~~c
+SYSCALL_DEFINE3(poll, struct pollfd __user *, ufds, unsigned int, nfds,
+		long, timeout_msecs)
+{
+	struct timespec end_time, *to = NULL;
+	int ret;
+
+	if (timeout_msecs >= 0) {
+		to = &end_time;
+		poll_select_set_timeout(to, timeout_msecs / MSEC_PER_SEC,
+			NSEC_PER_MSEC * (timeout_msecs % MSEC_PER_SEC));
+	}
+
+	ret = do_sys_poll(ufds, nfds, to);
+
+	if (ret == -EINTR) {
+		struct restart_block *restart_block;
+
+		restart_block = &current_thread_info()->restart_block;
+		restart_block->fn = do_restart_poll;
+		restart_block->poll.ufds = ufds;
+		restart_block->poll.nfds = nfds;
+
+		if (timeout_msecs >= 0) {
+			restart_block->poll.tv_sec = end_time.tv_sec;
+			restart_block->poll.tv_nsec = end_time.tv_nsec;
+			restart_block->poll.has_timeout = 1;
+		} else
+			restart_block->poll.has_timeout = 0;
+
+		ret = -ERESTART_RESTARTBLOCK;
+	}
+	return ret;
+}
+
+~~~
+
+
+
+### poll_select_set_timeout
+
+~~~c
+/**
+ * poll_select_set_timeout - helper function to setup the timeout value
+ * @to:		pointer to timespec variable for the final timeout
+ * @sec:	seconds (from user space)
+ * @nsec:	nanoseconds (from user space)
+ *
+ * Note, we do not use a timespec for the user space value here, That
+ * way we can use the function for timeval and compat interfaces as well.
+ *
+ * Returns -EINVAL if sec/nsec are not normalized. Otherwise 0.
+ */
+int poll_select_set_timeout(struct timespec *to, long sec, long nsec)
+{
+	struct timespec ts = {.tv_sec = sec, .tv_nsec = nsec};
+
+	if (!timespec_valid(&ts))
+		return -EINVAL;
+
+	/* Optimize for the zero timeout value here */
+	if (!sec && !nsec) {
+		to->tv_sec = to->tv_nsec = 0;
+	} else {
+		ktime_get_ts(to);
+		*to = timespec_add_safe(*to, ts);
+	}
+	return 0;
+}
+~~~
+
+
+
+### do_sys_poll
+
+* 检查文件描述符数目是否超过RLIMIT_NOFILE
+* 拷贝文件描述符集合到内核态
+* 调用poll_initwait初始化poll_wqueues
+* 调用do_poll
+
+~~~c
+int do_sys_poll(struct pollfd __user *ufds, unsigned int nfds,
+		struct timespec *end_time)
+{
+	struct poll_wqueues table;
+ 	int err = -EFAULT, fdcount, len, size;
+	/* Allocate small arguments on the stack to save memory and be
+	   faster - use long to make sure the buffer is aligned properly
+	   on 64 bit archs to avoid unaligned access */
+    //POLL_STACK_ALLOC大小为256
+	long stack_pps[POLL_STACK_ALLOC/sizeof(long)];
+	struct poll_list *const head = (struct poll_list *)stack_pps;
+ 	struct poll_list *walk = head;
+ 	unsigned long todo = nfds;
+
+	if (nfds > current->signal->rlim[RLIMIT_NOFILE].rlim_cur)
+		return -EINVAL;
+
+	len = min_t(unsigned int, nfds, N_STACK_PPS);
+	for (;;) {
+		walk->next = NULL;
+		walk->len = len;
+		if (!len)
+			break;
+		//从ufds开始拷贝数据到walk->entries
+		if (copy_from_user(walk->entries, ufds + nfds-todo,
+					sizeof(struct pollfd) * walk->len))
+			goto out_fds;
+
+		todo -= walk->len;
+		if (!todo)
+			break;
+
+		len = min(todo, POLLFD_PER_PAGE);
+		size = sizeof(struct poll_list) + sizeof(struct pollfd) * len;
+		walk = walk->next = kmalloc(size, GFP_KERNEL);
+		if (!walk) {
+			err = -ENOMEM;
+			goto out_fds;
+		}
+	}
+
+	poll_initwait(&table);
+	fdcount = do_poll(nfds, head, &table, end_time);
+	poll_freewait(&table);
+
+	for (walk = head; walk; walk = walk->next) {
+		struct pollfd *fds = walk->entries;
+		int j;
+
+		for (j = 0; j < walk->len; j++, ufds++)
+			if (__put_user(fds[j].revents, &ufds->revents))
+				goto out_fds;
+  	}
+
+	err = fdcount;
+out_fds:
+	walk = head->next;
+	while (walk) {
+		struct poll_list *pos = walk;
+		walk = walk->next;
+		kfree(pos);
+	}
+
+	return err;
+}
+
+static long do_restart_poll(struct restart_block *restart_block)
+{
+	struct pollfd __user *ufds = restart_block->poll.ufds;
+	int nfds = restart_block->poll.nfds;
+	struct timespec *to = NULL, end_time;
+	int ret;
+
+	if (restart_block->poll.has_timeout) {
+		end_time.tv_sec = restart_block->poll.tv_sec;
+		end_time.tv_nsec = restart_block->poll.tv_nsec;
+		to = &end_time;
+	}
+
+	ret = do_sys_poll(ufds, nfds, to);
+
+	if (ret == -EINTR) {
+		restart_block->fn = do_restart_poll;
+		ret = -ERESTART_RESTARTBLOCK;
+	}
+	return ret;
+}
+
+~~~
+
+
+
+### do_poll
+
+~~~c
+static int do_poll(unsigned int nfds,  struct poll_list *list,
+		   struct poll_wqueues *wait, struct timespec *end_time)
+{
+	poll_table* pt = &wait->pt;
+	ktime_t expire, *to = NULL;
+	int timed_out = 0, count = 0;
+	unsigned long slack = 0;
+
+	/* Optimise the no-wait case */
+	if (end_time && !end_time->tv_sec && !end_time->tv_nsec) {
+		pt = NULL;
+		timed_out = 1;
+	}
+
+	if (end_time && !timed_out)
+		slack = estimate_accuracy(end_time);
+
+	for (;;) {
+		struct poll_list *walk;
+
+		for (walk = list; walk != NULL; walk = walk->next) {
+			struct pollfd * pfd, * pfd_end;
+
+			pfd = walk->entries;
+			pfd_end = pfd + walk->len;
+			for (; pfd != pfd_end; pfd++) {
+				/*
+				 * Fish for events. If we found one, record it
+				 * and kill the poll_table, so we don't
+				 * needlessly register any other waiters after
+				 * this. They'll get immediately deregistered
+				 * when we break out and return.
+				 */
+				if (do_pollfd(pfd, pt)) {
+					count++;
+					pt = NULL;
+				}
+			}
+		}
+		/*
+		 * All waiters have already been registered, so don't provide
+		 * a poll_table to them on the next loop iteration.
+		 */
+		pt = NULL;
+		if (!count) {
+			count = wait->error;
+			if (signal_pending(current))
+				count = -EINTR;
+		}
+		if (count || timed_out)
+			break;
+
+		/*
+		 * If this is the first loop and we have a timeout
+		 * given, then we convert to ktime_t and set the to
+		 * pointer to the expiry value.
+		 */
+		if (end_time && !to) {
+			expire = timespec_to_ktime(*end_time);
+			to = &expire;
+		}
+
+		if (!poll_schedule_timeout(wait, TASK_INTERRUPTIBLE, to, slack))
+			timed_out = 1;
+	}
+	return count;
+}
+~~~
+
+
+
+
+
+### do_pollfd
+
+~~~
+/*
+ * Fish for pollable events on the pollfd->fd file descriptor. We're only
+ * interested in events matching the pollfd->events mask, and the result
+ * matching that mask is both recorded in pollfd->revents and returned. The
+ * pwait poll_table will be used by the fd-provided poll handler for waiting,
+ * if non-NULL.
+ */
+static inline unsigned int do_pollfd(struct pollfd *pollfd, poll_table *pwait)
+{
+	unsigned int mask;
+	int fd;
+
+	mask = 0;
+	fd = pollfd->fd;
+	if (fd >= 0) {
+		int fput_needed;
+		struct file * file;
+
+		file = fget_light(fd, &fput_needed);
+		mask = POLLNVAL;
+		if (file != NULL) {
+			mask = DEFAULT_POLLMASK;
+			if (file->f_op && file->f_op->poll)
+				mask = file->f_op->poll(file, pwait);
+			/* Mask out unneeded events. */
+			mask &= pollfd->events | POLLERR | POLLHUP;
+			fput_light(file, fput_needed);
+		}
+	}
+	pollfd->revents = mask;
+
+	return mask;
+}
+
+~~~
+
+
+
+### __pollwait
+
+若是TCP，tcp_poll会调用此函数
+
+~~~c
+/* Add a new entry */
+static void __pollwait(struct file *filp, wait_queue_head_t *wait_address,
+				poll_table *p)
+{
+	struct poll_wqueues *pwq = container_of(p, struct poll_wqueues, pt);
+	struct poll_table_entry *entry = poll_get_entry(pwq);
+	if (!entry)
+		return;
+	get_file(filp);
+	entry->filp = filp;
+	entry->wait_address = wait_address;
+	init_waitqueue_func_entry(&entry->wait, pollwake);
+	entry->wait.private = pwq;
+	add_wait_queue(wait_address, &entry->wait);
+}
+~~~
+
+
+
 ## epoll
 
 fs/eventpoll.c
@@ -470,6 +795,94 @@ fs/eventpoll.c
 
 
 ### 系统调用部分
+
+
+
+#### epitem 的定义
+
+~~~c
+/*
+ * Each file descriptor added to the eventpoll interface will
+ * have an entry of this type linked to the "rbr" RB tree.
+ */
+struct epitem {
+	/* RB tree node used to link this structure to the eventpoll RB tree */
+	struct rb_node rbn;
+
+	/* List header used to link this structure to the eventpoll ready list */
+	struct list_head rdllink;
+
+	/*
+	 * Works together "struct eventpoll"->ovflist in keeping the
+	 * single linked chain of items.
+	 */
+	struct epitem *next;
+
+	/* The file descriptor information this item refers to */
+	struct epoll_filefd ffd;
+
+	/* Number of active wait queue attached to poll operations */
+	int nwait;
+
+	/* List containing poll wait queues */
+	struct list_head pwqlist;
+
+	/* The "container" of this item */
+	struct eventpoll *ep;
+
+	/* List header used to link this item to the "struct file" items list */
+	struct list_head fllink;
+
+	/* The structure that describe the interested events and the source fd */
+	struct epoll_event event;
+};
+~~~
+
+
+
+#### eventpoll的定义
+
+~~~c
+/*
+ * This structure is stored inside the "private_data" member of the file
+ * structure and rapresent the main data sructure for the eventpoll
+ * interface.
+ */
+struct eventpoll {
+	/* Protect the this structure access */
+	spinlock_t lock;
+
+	/*
+	 * This mutex is used to ensure that files are not removed
+	 * while epoll is using them. This is held during the event
+	 * collection loop, the file cleanup path, the epoll file exit
+	 * code and the ctl operations.
+	 */
+	struct mutex mtx;
+
+	/* Wait queue used by sys_epoll_wait() */
+	wait_queue_head_t wq;
+
+	/* Wait queue used by file->poll() */
+	wait_queue_head_t poll_wait;
+
+	/* List of ready file descriptors */
+	struct list_head rdllist;
+
+	/* RB tree root used to store monitored fd structs */
+	struct rb_root rbr;
+
+	/*
+	 * This is a single linked list that chains all the "struct epitem" that
+	 * happened while transfering ready events to userspace w/out
+	 * holding ->lock.
+	 */
+	struct epitem *ovflist;
+
+	/* The user that created the eventpoll descriptor */
+	struct user_struct *user;
+};
+~~~
 
 
 
@@ -539,6 +952,12 @@ SYSCALL_DEFINE1(epoll_create, int, size)
 
 #### epoll_ctl
 
+1.  检查op 是否为EPOLL_CTL_DEL,若op是EPOLL_CTL_DEL且调用copy_from_user失败，则返回对应的错误码
+2. 检查参数epfd是否有效,无效返回-EBADF
+3. 检查参数fd是否有效, 无效返回-EBADF
+4. 检查fd对应的文件是否支持poll(轮询)。若不支持，返回-EPERM
+5. 调用ep_find,检查红黑树中是否存在fd
+
 ~~~c
 /*
  * The following function implements the controller interface for
@@ -600,6 +1019,7 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 	 * above, we can be sure to be able to use the item looked up by
 	 * ep_find() till we release the mutex.
 	 */
+    //epi 是指向struct epitem类型的指针
 	epi = ep_find(ep, tfile, fd);
 
 	error = -EINVAL;
@@ -759,13 +1179,125 @@ SYSCALL_DEFINE6(epoll_pwait, int, epfd, struct epoll_event __user *, events,
 
 
 
+## tcp_poll
+
+net/ipv4/tcp.c
+
+~~~c
+/*
+ *	Wait for a TCP event.
+ *
+ *	Note that we don't need to lock the socket, as the upper poll layers
+ *	take care of normal races (between the test and the event) and we don't
+ *	go look at any of the socket buffers directly.
+ */
+unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
+{
+	unsigned int mask;
+	struct sock *sk = sock->sk;
+	struct tcp_sock *tp = tcp_sk(sk);
+
+	poll_wait(file, sk->sk_sleep, wait);
+	if (sk->sk_state == TCP_LISTEN)
+		return inet_csk_listen_poll(sk);
+
+	/* Socket is not locked. We are protected from async events
+	 * by poll logic and correct handling of state changes
+	 * made by other threads is impossible in any case.
+	 */
+
+	mask = 0;
+	if (sk->sk_err)
+		mask = POLLERR;
+
+	/*
+	 * POLLHUP is certainly not done right. But poll() doesn't
+	 * have a notion of HUP in just one direction, and for a
+	 * socket the read side is more interesting.
+	 *
+	 * Some poll() documentation says that POLLHUP is incompatible
+	 * with the POLLOUT/POLLWR flags, so somebody should check this
+	 * all. But careful, it tends to be safer to return too many
+	 * bits than too few, and you can easily break real applications
+	 * if you don't tell them that something has hung up!
+	 *
+	 * Check-me.
+	 *
+	 * Check number 1. POLLHUP is _UNMASKABLE_ event (see UNIX98 and
+	 * our fs/select.c). It means that after we received EOF,
+	 * poll always returns immediately, making impossible poll() on write()
+	 * in state CLOSE_WAIT. One solution is evident --- to set POLLHUP
+	 * if and only if shutdown has been made in both directions.
+	 * Actually, it is interesting to look how Solaris and DUX
+	 * solve this dilemma. I would prefer, if POLLHUP were maskable,
+	 * then we could set it on SND_SHUTDOWN. BTW examples given
+	 * in Stevens' books assume exactly this behaviour, it explains
+	 * why POLLHUP is incompatible with POLLOUT.	--ANK
+	 *
+	 * NOTE. Check for TCP_CLOSE is added. The goal is to prevent
+	 * blocking on fresh not-connected or disconnected socket. --ANK
+	 */
+	if (sk->sk_shutdown == SHUTDOWN_MASK || sk->sk_state == TCP_CLOSE)
+		mask |= POLLHUP;
+	if (sk->sk_shutdown & RCV_SHUTDOWN)
+		mask |= POLLIN | POLLRDNORM | POLLRDHUP;
+
+	/* Connected? */
+	if ((1 << sk->sk_state) & ~(TCPF_SYN_SENT | TCPF_SYN_RECV)) {
+		int target = sock_rcvlowat(sk, 0, INT_MAX);
+
+		if (tp->urg_seq == tp->copied_seq &&
+		    !sock_flag(sk, SOCK_URGINLINE) &&
+		    tp->urg_data)
+			target--;
+
+		/* Potential race condition. If read of tp below will
+		 * escape above sk->sk_state, we can be illegally awaken
+		 * in SYN_* states. */
+		if (tp->rcv_nxt - tp->copied_seq >= target)
+			mask |= POLLIN | POLLRDNORM;
+
+		if (!(sk->sk_shutdown & SEND_SHUTDOWN)) {
+			if (sk_stream_wspace(sk) >= sk_stream_min_wspace(sk)) {
+				mask |= POLLOUT | POLLWRNORM;
+			} else {  /* send SIGIO later */
+				set_bit(SOCK_ASYNC_NOSPACE,
+					&sk->sk_socket->flags);
+				set_bit(SOCK_NOSPACE, &sk->sk_socket->flags);
+
+				/* Race breaker. If space is freed after
+				 * wspace test but before the flags are set,
+				 * IO signal will be lost.
+				 */
+				if (sk_stream_wspace(sk) >= sk_stream_min_wspace(sk))
+					mask |= POLLOUT | POLLWRNORM;
+			}
+		}
+
+		if (tp->urg_data & TCP_URG_VALID)
+			mask |= POLLPRI;
+	}
+	return mask;
+}
+
+
+~~~
+
+
+
 ## 总结
 
 select:
 
 * 无论是在用户态还是在内核态，为检查满足条件的`文件描述符`，都需要扫描整个`文件描述符集合`,时间复杂度O(n)。这就导致了效率低
+* 支持的文件描述符数目受到限制
 
 epoll:
+
+* 支持的文件描述符不受限制（仅受系统资源限制)
+* epoll_wait只返回满足条件的`文件描述符`集合，所以相较select返回整个`文件描述符`更高效
+* epoll对感兴趣的`文件描述符`集合和满足条件的`文件描述符`集合使用独立的结构。避免了select反复添加同一个文件描述符
+
 
 
 

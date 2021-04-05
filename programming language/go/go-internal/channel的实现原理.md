@@ -15,9 +15,36 @@
 
 
 
+写空channel导致阻塞的示例:
+
+经go1.14.2验证
+
+~~~go
+import(
+        "fmt"
+        "time"
+)
+
+func main(){
+        var ch chan int
+        go func(){
+                fmt.Printf("kk\n")
+                ch<-2
+                fmt.Printf("hello")
+        }()
+
+        for{
+                time.Sleep(time.Second)
+                fmt.Printf("xx\n")
+        }
+}
+~~~
+
+
+
 #### 注意
 
-* <font color="red">对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，会读取到已经在队列的消息么?还是读取到对应类型的0值。**通过分析代码，可以看到channel关闭后仍会先去读取到在队列的消息**</font>
+* <font color="red">对于带缓冲的channel，且缓冲已经有一些消息。关闭channel之后再去读取，还会读取到已经在队列的消息么?还是读取到对应类型的0值。**通过分析代码，可以看到channel关闭后仍会先去读取到在队列的消息**</font>
 * 协程因等待接收或发送消息进入等待状态。因channel被关闭或接收、发送消息条件满足被唤醒
 * 进入等待队列的协程，都是拿到消息或发送消息成功后，才被唤醒
 * 多个协程等待同一个消息，遵循的是FIFO(先到先得)原则

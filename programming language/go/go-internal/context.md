@@ -4,9 +4,9 @@
 
 ### 理解
 
-个人理解context 就是协程之间管理的一种沟通机制，使用context可以
+个人理解context 就是协程之间管理的一种沟通机制，使用context可以取消协程的执行（使用cancel函数)。
 
-WithCancel和WithTimeout的区别就是一个手动调用cancel,一个通过j既可以通过定时器触发自动调用cancel也可手动调用cancel
+WithCancel和WithTimeout的区别就是一个手动调用cancel,一个通过既可以通过定时器触发自动调用cancel也可手动调用cancel
 
 ### 正确的姿势
 
@@ -21,28 +21,20 @@ import(
 
 
 func main(){
-        dbWithTimeout()
+    ctx, cnacel := context.WithCancel(context.Background())
+    go doSomthing(ctx)
+    cancel()
 }
 
-func dbWithTimeout(){
-        ctx, cancel := context.WithTimeout(context.Background(), time.Second * 10)
-        //defer cancel()
-        go db(cancel)
-        for{
-                select{
-                case <-ctx.Done():
-                        fmt.Printf("%v\n", ctx.Err())
-                        return
-
-                }
-
+func doSomthing(ctx context.Context){
+    for{
+        select {
+            case <-ctx.Done():
+            	return
+        default:
+            //do some stuff
         }
-}
-
-func db(cancel context.CancelFunc){
-        defer cancel()
-        time.Sleep(time.Second * 5)
-
+    }
 }
 
 
