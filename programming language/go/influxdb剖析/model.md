@@ -139,6 +139,83 @@ type point struct {
 
 
 
+##### NewPoint
+
+~~~go
+// NewPoint returns a new point with the given measurement name, tags, fields and timestamp.  If
+// an unsupported field value (NaN, or +/-Inf) or out of range time is passed, this function
+// returns an error.
+func NewPoint(name string, tags Tags, fields Fields, t time.Time) (Point, error) {
+	key, err := pointKey(name, tags, fields, t)
+	if err != nil {
+		return nil, err
+	}
+
+	return &point{
+		key:    key,
+		time:   t,
+		fields: fields.MarshalBinary(),
+	}, nil
+}
+~~~
+
+
+
+##### pointKey
+
+~~~go
+// pointKey checks some basic requirements for valid points, and returns the
+// key, along with an possible error.
+func pointKey(measurement string, tags Tags, fields Fields, t time.Time) ([]byte, error) {
+	if len(fields) == 0 {
+		return nil, ErrPointMustHaveAField
+	}
+
+	if !t.IsZero() {
+		if err := CheckTime(t); err != nil {
+			return nil, err
+		}
+	}
+
+	for key, value := range fields {
+		switch value := value.(type) {
+		case float64:
+			// Ensure the caller validates and handles invalid field values
+			if math.IsInf(value, 0) {
+				return nil, fmt.Errorf("+/-Inf is an unsupported value for field %s", key)
+			}
+			if math.IsNaN(value) {
+				return nil, fmt.Errorf("NaN is an unsupported value for field %s", key)
+			}
+		case float32:
+			// Ensure the caller validates and handles invalid field values
+			if math.IsInf(float64(value), 0) {
+				return nil, fmt.Errorf("+/-Inf is an unsupported value for field %s", key)
+			}
+			if math.IsNaN(float64(value)) {
+				return nil, fmt.Errorf("NaN is an unsupported value for field %s", key)
+			}
+		}
+		if len(key) == 0 {
+			return nil, fmt.Errorf("all fields must have non-empty names")
+		}
+	}
+
+	key := MakeKey([]byte(measurement), tags)
+	for field := range fields {
+		sz := seriesKeySize(key, []byte(field))
+        //64KB
+		if sz > MaxKeyLength {
+			return nil, fmt.Errorf("max key length exceeded: %v > %v", sz, MaxKeyLength)
+		}
+	}
+
+	return key, nil
+}
+~~~
+
+
+
 ##### Tag 和Tags
 
 ~~~go

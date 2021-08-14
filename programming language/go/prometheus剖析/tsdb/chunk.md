@@ -89,7 +89,7 @@ headAppender.Commit 会将一段时间内的某个series(memSeries存储)对应�
 
 ### 待解决问题
 
-* ./data/chunks_head/目录下的数据文件和 ./data/ulid/chunks/目录下的数据文件是啥关系
+* ./data/chunks_head/目录下的数据文件和 ./data/ulid/chunks/目录下的数据文件是啥关系。**compact会将chunks_head目录下的文件中的数据再次写入./data/ulid/chunks/目录下，同时建立索引。写入完成后，会删除chunks_head目录下已经写入的数据文件。**
 * chunk的编码方式
 
 ### Writer
@@ -184,6 +184,7 @@ func (w *Writer) WriteChunks(chks ...Meta) error {
         //MaxChunkLenghtFieldSize 的值是常数5
 		// Each chunk contains: data length + encoding + the data itself + crc32
 		chkSize := int64(MaxChunkLengthFieldSize) // The data length is a variable length field so use the maximum possible value.
+        
         //ChunkEncodingSize 的值是1
 		chkSize += ChunkEncodingSize              // The chunk encoding.
 		chkSize += int64(len(chk.Chunk.Bytes()))  // The data itself.
@@ -806,6 +807,80 @@ func (cdm *ChunkDiskMapper) finalizeCurFile() error {
 	return cdm.curFile.Close()
 }
 ~~~
+
+
+
+#### 清除数据文件
+
+##### ChunkDiskMapper.Truncate
+
+~~~go
+// Truncate deletes the head chunk files which are strictly below the mint.
+// mint should be in milliseconds.
+func (cdm *ChunkDiskMapper) Truncate(mint int64) error {
+	if !cdm.fileMaxtSet {
+		return errors.New("maxt of the files are not set")
+	}
+	cdm.readPathMtx.RLock()
+
+	// Sort the file indices, else if files deletion fails in between,
+	// it can lead to unsequential files as the map is not sorted.
+	chkFileIndices := make([]int, 0, len(cdm.mmappedChunkFiles))
+	for seq := range cdm.mmappedChunkFiles {
+		chkFileIndices = append(chkFileIndices, seq)
+	}
+	sort.Ints(chkFileIndices)
+
+	var removedFiles []int
+	for _, seq := range chkFileIndices {
+		if seq == cdm.curFileSequence || cdm.mmappedChunkFiles[seq].maxt >= mint {
+			break
+		}
+		if cdm.mmappedChunkFiles[seq].maxt < mint {
+			removedFiles = append(removedFiles, seq)
+		}
+	}
+	cdm.readPathMtx.RUnlock()
+
+	errs := tsdb_errors.NewMulti()
+	// Cut a new file only if the current file has some chunks.
+	if cdm.curFileSize() > HeadChunkFileHeaderSize {
+		errs.Add(cdm.CutNewFile())
+	}
+	errs.Add(cdm.deleteFiles(removedFiles))
+	return errs.Err()
+}
+
+func (cdm *ChunkDiskMapper) deleteFiles(removedFiles []int) error {
+	cdm.readPathMtx.Lock()
+	for _, seq := range removedFiles {
+		if err := cdm.closers[seq].Close(); err != nil {
+			cdm.readPathMtx.Unlock()
+			return err
+		}
+		delete(cdm.mmappedChunkFiles, seq)
+		delete(cdm.closers, seq)
+	}
+	cdm.readPathMtx.Unlock()
+
+	// We actually delete the files separately to not block the readPathMtx for long.
+	for _, seq := range removedFiles {
+		if err := os.Remove(segmentFile(cdm.dir.Name(), seq)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+~~~
+
+
+
+
+
+
+
+
 
 #### 写数据相关 (chunk_head目录)
 

@@ -6,6 +6,197 @@ shard的实现在tsdb/shard.go中
 
 
 
+## 总结
+
+### measurement field 文件格式
+
+以protobuf 序列化后存储
+
+~~~
+magic("0613") | 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+name | fields | 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+000000  \0 006 001 003  \n   .  \n  \b   d   a   t   a   b   a   s   e
+000010 022 023  \n 017   n   u   m   M   e   a   s   u   r   e   m   e
+000020   n   t   s 020 002 022  \r  \n  \t   n   u   m   S   e   r   i
+000030   e   s 020 002  \n   -  \n 016   t   s   m   1   _   f   i   l
+000040   e   s   t   o   r   e 022  \f  \n  \b   n   u   m   F   i   l
+000050   e   s 020 002 022  \r  \n  \t   d   i   s   k   B   y   t   e
+000060   s 020 002  \n 221 001  \n 005   w   r   i   t   e 022  \r  \n
+000070  \t   w   r   i   t   e   D   r   o   p 020 002 022 016  \n  \n
+000080   w   r   i   t   e   E   r   r   o   r 020 002 022  \a  \n 003
+000090   r   e   q 020 002 022 020  \n  \f   s   u   b   W   r   i   t
+0000a0   e   D   r   o   p 020 002 022  \f  \n  \b   p   o   i   n   t
+0000b0   R   e   q 020 002 022 020  \n  \f   w   r   i   t   e   T   i
+0000c0   m   e   o   u   t 020 002 022  \v  \n  \a   w   r   i   t   e
+0000d0   O   k 020 002 022 016  \n  \n   s   u   b   W   r   i   t   e
+0000e0   O   k 020 002 022 021  \n  \r   p   o   i   n   t   R   e   q
+0000f0   L   o   c   a   l 020 002  \n      \n 002   c   q 022  \r  \n
+000100  \t   q   u   e   r   y   F   a   i   l 020 002 022  \v  \n  \a
+000110   q   u   e   r   y   O   k 020 002  \n   F  \n  \n   s   u   b
+000120   s   c   r   i   b   e   r 022 021  \n  \r   w   r   i   t   e
+000130   F   a   i   l   u   r   e   s 020 002 022 022  \n 016   c   r
+000140   e   a   t   e   F   a   i   l   u   r   e   s 020 002 022 021
+000150  \n  \r   p   o   i   n   t   s   W   r   i   t   t   e   n 020
+000160 002  \n 313 001  \n 005   s   h   a   r   d 022 016  \n  \n   w
+000170   r   i   t   e   R   e   q   O   k 020 002 022 026  \n 022   w
+000180   r   i   t   e   P   o   i   n   t   s   D   r   o   p   p   e
+000190   d 020 002 022 020  \n  \f   s   e   r   i   e   s   C   r   e
+0001a0   a   t   e 020 002 022 021  \n  \r   w   r   i   t   e   V   a
+0001b0   l   u   e   s   O   k 020 002 022  \f  \n  \b   w   r   i   t
+0001c0   e   R   e   q 020 002 022 022  \n 016   w   r   i   t   e   P
+0001d0   o   i   n   t   s   E   r   r 020 002 022  \r  \n  \t   d   i
+0001e0   s   k   B   y   t   e   s 020 002 022 021  \n  \r   w   r   i
+0001f0   t   e   P   o   i   n   t   s   O   k 020 002 022 016  \n  \n
+000200   w   r   i   t   e   B   y   t   e   s 020 002 022 017  \n  \v
+000210   w   r   i   t   e   R   e   q   E   r   r 020 002 022 020  \n
+000220  \f   f   i   e   l   d   s   C   r   e   a   t   e 020 002  \n
+000230   v  \n  \r   q   u   e   r   y   E   x   e   c   u   t   o   r
+000240 022 023  \n 017   r   e   c   o   v   e   r   e   d   P   a   n
+000250   i   c   s 020 002 022 023  \n 017   q   u   e   r   y   D   u
+000260   r   a   t   i   o   n   N   s 020 002 022 021  \n  \r   q   u
+000270   e   r   i   e   s   A   c   t   i   v   e 020 002 022 023  \n
+000280 017   q   u   e   r   i   e   s   E   x   e   c   u   t   e   d
+000290 020 002 022 023  \n 017   q   u   e   r   i   e   s   F   i   n
+0002a0   i   s   h   e   d 020 002  \n   \  \n  \b   t   s   m   1   _
+0002b0   w   a   l 022 033  \n 027   c   u   r   r   e   n   t   S   e
+0002c0   g   m   e   n   t   D   i   s   k   B   y   t   e   s 020 002
+0002d0 022 030  \n 024   o   l   d   S   e   g   m   e   n   t   s   D
+0002e0   i   s   k   B   y   t   e   s 020 002 022  \v  \n  \a   w   r
+0002f0   i   t   e   O   k 020 002 022  \f  \n  \b   w   r   i   t   e
+000300   E   r   r 020 002  \n 335 006  \n  \v   t   s   m   1   _   e
+000310   n   g   i   n   e 022 032  \n 026   t   s   m   O   p   t   i
+000320   m   i   z   e   C   o   m   p   a   c   t   i   o   n   s 020
+000330 002 022 035  \n 031   t   s   m   F   u   l   l   C   o   m   p
+000340   a   c   t   i   o   n   D   u   r   a   t   i   o   n 020 002
+000350 022 026  \n 022   t   s   m   F   u   l   l   C   o   m   p   a
+000360   c   t   i   o   n   s 020 002 022 024  \n 020   c   a   c   h
+000370   e   C   o   m   p   a   c   t   i   o   n   s 020 002 022 030
+000380  \n 024   t   s   m   L   e   v   e   l   2   C   o   m   p   a
+000390   c   t   i   o   n   s 020 002 022 036  \n 032   t   s   m   O
+0003a0   p   t   i   m   i   z   e   C   o   m   p   a   c   t   i   o
+0003b0   n   Q   u   e   u   e 020 002 022 034  \n 030   t   s   m   L
+0003c0   e   v   e   l   2   C   o   m   p   a   c   t   i   o   n   Q
+0003d0   u   e   u   e 020 002 022 026  \n 022   c   a   c   h   e   C
+0003e0   o   m   p   a   c   t   i   o   n   E   r   r 020 002 022 032
+0003f0  \n 026   c   a   c   h   e   C   o   m   p   a   c   t   i   o
+000400   n   s   A   c   t   i   v   e 020 002 022 032  \n 026   t   s
+000410   m   L   e   v   e   l   2   C   o   m   p   a   c   t   i   o
+000420   n   E   r   r 020 002 022 034  \n 030   t   s   m   L   e   v
+000430   e   l   3   C   o   m   p   a   c   t   i   o   n   Q   u   e
+000440   u   e 020 002 022 030  \n 024   t   s   m   L   e   v   e   l
+000450   3   C   o   m   p   a   c   t   i   o   n   s 020 002 022 032
+000460  \n 026   t   s   m   L   e   v   e   l   3   C   o   m   p   a
+000470   c   t   i   o   n   E   r   r 020 002 022      \n 034   t   s
+000480   m   O   p   t   i   m   i   z   e   C   o   m   p   a   c   t
+000490   i   o   n   s   A   c   t   i   v   e 020 002 022 036  \n 032
+0004a0   t   s   m   L   e   v   e   l   2   C   o   m   p   a   c   t
+0004b0   i   o   n   s   A   c   t   i   v   e 020 002 022 030  \n 024
+0004c0   t   s   m   F   u   l   l   C   o   m   p   a   c   t   i   o
+0004d0   n   E   r   r 020 002 022 037  \n 033   t   s   m   L   e   v
+0004e0   e   l   2   C   o   m   p   a   c   t   i   o   n   D   u   r
+0004f0   a   t   i   o   n 020 002 022 032  \n 026   t   s   m   L   e
+000500   v   e   l   1   C   o   m   p   a   c   t   i   o   n   E   r
+000510   r 020 002 022 033  \n 027   c   a   c   h   e   C   o   m   p
+000520   a   c   t   i   o   n   D   u   r   a   t   i   o   n 020 002
+000530 022 034  \n 030   t   s   m   L   e   v   e   l   1   C   o   m
+000540   p   a   c   t   i   o   n   Q   u   e   u   e 020 002 022 034
+000550  \n 030   t   s   m   O   p   t   i   m   i   z   e   C   o   m
+000560   p   a   c   t   i   o   n   E   r   r 020 002 022 036  \n 032
+000570   t   s   m   L   e   v   e   l   3   C   o   m   p   a   c   t
+000580   i   o   n   s   A   c   t   i   v   e 020 002 022 037  \n 033
+000590   t   s   m   L   e   v   e   l   1   C   o   m   p   a   c   t
+0005a0   i   o   n   D   u   r   a   t   i   o   n 020 002 022 034  \n
+0005b0 030   t   s   m   F   u   l   l   C   o   m   p   a   c   t   i
+0005c0   o   n   s   A   c   t   i   v   e 020 002 022 030  \n 024   t
+0005d0   s   m   L   e   v   e   l   1   C   o   m   p   a   c   t   i
+0005e0   o   n   s 020 002 022 037  \n 033   t   s   m   L   e   v   e
+0005f0   l   3   C   o   m   p   a   c   t   i   o   n   D   u   r   a
+000600   t   i   o   n 020 002 022 036  \n 032   t   s   m   L   e   v
+000610   e   l   1   C   o   m   p   a   c   t   i   o   n   s   A   c
+000620   t   i   v   e 020 002 022 032  \n 026   t   s   m   F   u   l
+000630   l   C   o   m   p   a   c   t   i   o   n   Q   u   e   u   e
+000640 020 002 022   !  \n 035   t   s   m   O   p   t   i   m   i   z
+000650   e   C   o   m   p   a   c   t   i   o   n   D   u   r   a   t
+000660   i   o   n 020 002  \n 243 001  \n  \n   t   s   m   1   _   c
+000670   a   c   h   e 022 027  \n 023   W   A   L   C   o   m   p   a
+000680   c   t   i   o   n   T   i   m   e   M   s 020 002 022  \v  \n
+000690  \a   w   r   i   t   e   O   k 020 002 022 016  \n  \n   c   a
+0006a0   c   h   e   A   g   e   M   s 020 002 022  \f  \n  \b   m   e
+0006b0   m   B   y   t   e   s 020 002 022 021  \n  \r   s   n   a   p
+0006c0   s   h   o   t   C   o   u   n   t 020 002 022 017  \n  \v   c
+0006d0   a   c   h   e   d   B   y   t   e   s 020 002 022  \f  \n  \b
+0006e0   w   r   i   t   e   E   r   r 020 002 022  \r  \n  \t   d   i
+0006f0   s   k   B   y   t   e   s 020 002 022 020  \n  \f   w   r   i
+000700   t   e   D   r   o   p   p   e   d 020 002  \n 335 001  \n  \a
+000710   r   u   n   t   i   m   e 022  \v  \n  \a   H   e   a   p   S
+000720   y   s 020 002 022 016  \n  \n   T   o   t   a   l   A   l   l
+000730   o   c 020 002 022  \r  \n  \t   H   e   a   p   I   n   U   s
+000740   e 020 002 022 020  \n  \f   N   u   m   G   o   r   o   u   t
+000750   i   n   e 020 002 022  \t  \n 005   A   l   l   o   c 020 002
+000760 022  \f  \n  \b   H   e   a   p   I   d   l   e 020 002 022 017
+000770  \n  \v   H   e   a   p   O   b   j   e   c   t   s 020 002 022
+000780  \a  \n 003   S   y   s 020 002 022 020  \n  \f   H   e   a   p
+000790   R   e   l   e   a   s   e   d 020 002 022  \v  \n  \a   M   a
+0007a0   l   l   o   c   s 020 002 022 020  \n  \f   P   a   u   s   e
+0007b0   T   o   t   a   l   N   s 020 002 022  \v  \n  \a   L   o   o
+0007c0   k   u   p   s 020 002 022  \r  \n  \t   H   e   a   p   A   l
+0007d0   l   o   c 020 002 022  \t  \n 005   N   u   m   G   C 020 002
+0007e0 022  \t  \n 005   F   r   e   e   s 020 002  \n 306 003  \n 005
+0007f0   h   t   t   p   d 022 032  \n 026   f   l   u   x   Q   u   e
+000800   r   y   R   e   q   D   u   r   a   t   i   o   n   N   s 020
+000810 002 022 022  \n 016   q   u   e   r   y   R   e   s   p   B   y
+000820   t   e   s 020 002 022 020  \n  \f   f   l   u   x   Q   u   e
+000830   r   y   R   e   q 020 002 022 025  \n 021   p   o   i   n   t
+000840   s   W   r   i   t   t   e   n   F   a   i   l 020 002 022  \f
+000850  \n  \b   q   u   e   r   y   R   e   q 020 002 022 017  \n  \v
+000860   c   l   i   e   n   t   E   r   r   o   r 020 002 022 021  \n
+000870  \r   r   e   q   D   u   r   a   t   i   o   n   N   s 020 002
+000880 022 023  \n 017   r   e   c   o   v   e   r   e   d   P   a   n
+000890   i   c   s 020 002 022  \r  \n  \t   s   t   a   t   u   s   R
+0008a0   e   q 020 002 022 022  \n 016   w   r   i   t   e   R   e   q
+0008b0   A   c   t   i   v   e 020 002 022 026  \n 022   w   r   i   t
+0008c0   e   R   e   q   D   u   r   a   t   i   o   n   N   s 020 002
+0008d0 022 020  \n  \f   p   r   o   m   W   r   i   t   e   R   e   q
+0008e0 020 002 022 023  \n 017   p   o   i   n   t   s   W   r   i   t
+0008f0   t   e   n   O   K 020 002 022  \v  \n  \a   p   i   n   g   R
+000900   e   q 020 002 022  \f  \n  \b   a   u   t   h   F   a   i   l
+000910 020 002 022 023  \n 017   v   a   l   u   e   s   W   r   i   t
+000920   t   e   n   O   K 020 002 022 017  \n  \v   s   e   r   v   e
+000930   r   E   r   r   o   r 020 002 022 030  \n 024   p   o   i   n
+000940   t   s   W   r   i   t   t   e   n   D   r   o   p   p   e   d
+000950 020 002 022  \f  \n  \b   w   r   i   t   e   R   e   q 020 002
+000960 022 021  \n  \r   w   r   i   t   e   R   e   q   B   y   t   e
+000970   s 020 002 022 017  \n  \v   p   r   o   m   R   e   a   d   R
+000980   e   q 020 002 022  \r  \n  \t   r   e   q   A   c   t   i   v
+000990   e 020 002 022 026  \n 022   q   u   e   r   y   R   e   q   D
+0009a0   u   r   a   t   i   o   n   N   s 020 002 022  \a  \n 003   r
+0009b0   e   q 020 002
+0009b4
+~~~
+
+
+
+### field 类型
+
+* Unknown 0
+* float 1
+* integer 2
+* string 3
+* boolean 4
+* time 5
+* duration 6
+* tag 7
+* any 8
+* unsigned 9
+
+
+
 ## shard
 
 tsdp/shard.go
@@ -138,6 +329,7 @@ func (s *Shard) Open() error {
 		}
 		s.index = idx
 
+        //目前是tsm1 engine
 		// Initialize underlying engine.
 		e, err := NewEngine(s.id, idx, s.path, s.walPath, s.sfile, s.options)
 		if err != nil {
@@ -414,6 +606,7 @@ func (s *Shard) validateSeriesAndFields(points []models.Point) ([]models.Point, 
 				continue
 			}
 
+            //field 是否存在,存在则跳过
 			if mf.FieldBytes(fieldKey) != nil {
 				continue
 			}

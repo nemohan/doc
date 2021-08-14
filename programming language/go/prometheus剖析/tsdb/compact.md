@@ -8,6 +8,105 @@
 
 感觉这部分代码写的不咋滴
 
+##### LeveledCompactor.Compact
+
+~~~go
+// Compact creates a new block in the compactor's directory from the blocks in the
+// provided directories.
+func (c *LeveledCompactor) Compact(dest string, dirs []string, open []*Block) (uid ulid.ULID, err error) {
+	var (
+		blocks []BlockReader
+		bs     []*Block
+		metas  []*BlockMeta
+		uids   []string
+	)
+	start := time.Now()
+
+	for _, d := range dirs {
+		meta, _, err := readMetaFile(d)
+		if err != nil {
+			return uid, err
+		}
+
+		var b *Block
+
+		// Use already open blocks if we can, to avoid
+		// having the index data in memory twice.
+		for _, o := range open {
+			if meta.ULID == o.Meta().ULID {
+				b = o
+				break
+			}
+		}
+
+		if b == nil {
+			var err error
+			b, err = OpenBlock(c.logger, d, c.chunkPool)
+			if err != nil {
+				return uid, err
+			}
+			defer b.Close()
+		}
+
+		metas = append(metas, meta)
+		blocks = append(blocks, b)
+		bs = append(bs, b)
+		uids = append(uids, meta.ULID.String())
+	}
+
+	uid = ulid.MustNew(ulid.Now(), rand.Reader)
+
+	meta := CompactBlockMetas(uid, metas...)
+	err = c.write(dest, meta, blocks...)
+	if err == nil {
+		if meta.Stats.NumSamples == 0 {
+			for _, b := range bs {
+				b.meta.Compaction.Deletable = true
+				n, err := writeMetaFile(c.logger, b.dir, &b.meta)
+				if err != nil {
+					level.Error(c.logger).Log(
+						"msg", "Failed to write 'Deletable' to meta file after compaction",
+						"ulid", b.meta.ULID,
+					)
+				}
+				b.numBytesMeta = n
+			}
+			uid = ulid.ULID{}
+			level.Info(c.logger).Log(
+				"msg", "compact blocks resulted in empty block",
+				"count", len(blocks),
+				"sources", fmt.Sprintf("%v", uids),
+				"duration", time.Since(start),
+			)
+		} else {
+			level.Info(c.logger).Log(
+				"msg", "compact blocks",
+				"count", len(blocks),
+				"mint", meta.MinTime,
+				"maxt", meta.MaxTime,
+				"ulid", meta.ULID,
+				"sources", fmt.Sprintf("%v", uids),
+				"duration", time.Since(start),
+			)
+		}
+		return uid, nil
+	}
+
+	errs := tsdb_errors.NewMulti(err)
+	if err != context.Canceled {
+		for _, b := range bs {
+			if err := b.setCompactionFailed(); err != nil {
+				errs.Add(errors.Wrapf(err, "setting compaction failed for block: %s", b.Dir()))
+			}
+		}
+	}
+
+	return uid, errs.Err()
+}
+~~~
+
+
+
 ### 缓存数据刷盘
 
 LeveldCompactor负责将缓存数据写入磁盘
@@ -309,6 +408,7 @@ func (c *LeveledCompactor) populateBlock(blocks []BlockReader, meta *BlockMeta, 
 	)
 
 	set := sets[0]
+    //什么时候sets > 1
 	if len(sets) > 1 {
 		// Merge series using compacting chunk series merger.
 		set = storage.NewMergeChunkSeriesSet(sets, storage.NewCompactingChunkSeriesMerger(storage.ChainedSeriesMerge))
@@ -322,6 +422,7 @@ func (c *LeveledCompactor) populateBlock(blocks []BlockReader, meta *BlockMeta, 
 		default:
 		}
 		s := set.At()
+        //s.Iterator 实际返回的玩意： populateWithDelChunkSeriesIterator
 		chksIter := s.Iterator()
 		chks = chks[:0]
 		for chksIter.Next() {
@@ -394,12 +495,35 @@ type blockBaseSeriesSet struct {
 
 
 
-##### blockBaseSeriesSet.Next
+
+
+##### newBlockChunkSeriesSet
+
+tsdb/querier.go中
 
 ~~~go
+//storage.ChunkSeriesSet是接口类型
+func newBlockChunkSeriesSet(i IndexReader, c ChunkReader, t tombstones.Reader, p index.Postings, mint, maxt int64) storage.ChunkSeriesSet {
+	return &blockChunkSeriesSet{
+		blockBaseSeriesSet{
+			index:      i,
+			chunks:     c,
+			tombstones: t,
+			p:          p,
+			mint:       mint,
+			maxt:       maxt,
+			bufLbls:    make(labels.Labels, 0, 10),
+		},
+	}
+}
+
 func (b *blockBaseSeriesSet) Next() bool {
     //b.p 是 index.Postings
 	for b.p.Next() {
+        //b.p.At 获取当前的series id.
+        //获取获取series对应的labels 保存到b.bufLbls
+        //chunk写入b.bufChks
+        //调用的是headIndexReader.Series
 		if err := b.index.Series(b.p.At(), &b.bufLbls, &b.bufChks); err != nil {
 			// Postings may be stale. Skip if no underlying series exists.
 			if errors.Cause(err) == storage.ErrNotFound {
@@ -472,35 +596,14 @@ func (b *blockBaseSeriesSet) Next() bool {
 	}//end for
 	return false
 }
-~~~
 
-
-
-##### newBlockChunkSeriesSet
-
-tsdb/querier.go中
-
-~~~go
-//storage.ChunkSeriesSet是接口类型
-func newBlockChunkSeriesSet(i IndexReader, c ChunkReader, t tombstones.Reader, p index.Postings, mint, maxt int64) storage.ChunkSeriesSet {
-	return &blockChunkSeriesSet{
-		blockBaseSeriesSet{
-			index:      i,
-			chunks:     c,
-			tombstones: t,
-			p:          p,
-			mint:       mint,
-			maxt:       maxt,
-			bufLbls:    make(labels.Labels, 0, 10),
-		},
-	}
-}
-
+//ChunkSeries 是接口类型
 func (b *blockChunkSeriesSet) At() storage.ChunkSeries {
 	// At can be looped over before iterating, so save the current value locally.
 	currIterFn := b.currIterFn
 	return &storage.ChunkSeriesEntry{
 		Lset: b.currLabels,
+        //currIterFn的返回结果是: populateWithDelGenericSeriesIterator
 		ChunkIteratorFn: func() chunks.Iterator {
 			return currIterFn().toChunkSeriesIterator()
 		},
@@ -513,6 +616,8 @@ func (b *blockChunkSeriesSet) At() storage.ChunkSeries {
 
 
 ### populateWithDelGenericSeriessIterator
+
+这玩意的名字真是又臭又长
 
 ~~~go
 // populateWithDelGenericSeriesIterator allows to iterate over given chunk metas. In each iteration it ensures
@@ -558,6 +663,7 @@ func (p *populateWithDelGenericSeriesIterator) next() bool {
 	p.i++
 	p.currChkMeta = p.chks[p.i]
 
+    //调用的是headChunkReader.Chunk
 	p.currChkMeta.Chunk, p.err = p.chunks.Chunk(p.currChkMeta.Ref)
 	if p.err != nil {
 		p.err = errors.Wrapf(p.err, "cannot populate chunk %d", p.currChkMeta.Ref)
@@ -566,6 +672,7 @@ func (p *populateWithDelGenericSeriesIterator) next() bool {
 
 	p.bufIter.Intervals = p.bufIter.Intervals[:0]
 	for _, interval := range p.intervals {
+        //时间段是否有重叠
 		if p.currChkMeta.OverlapsClosedInterval(interval.Mint, interval.Maxt) {
 			p.bufIter.Intervals = p.bufIter.Intervals.Add(interval)
 		}
@@ -599,6 +706,69 @@ func (p *populateWithDelGenericSeriesIterator) toSeriesIterator() chunkenc.Itera
 func (p *populateWithDelGenericSeriesIterator) toChunkSeriesIterator() chunks.Iterator {
 	return &populateWithDelChunkSeriesIterator{populateWithDelGenericSeriesIterator: p}
 }
+~~~
+
+
+
+##### populateWithDelChunkSeriesIterator
+
+~~~go
+type populateWithDelChunkSeriesIterator struct {
+	*populateWithDelGenericSeriesIterator
+
+	curr chunks.Meta
+}
+
+func (p *populateWithDelChunkSeriesIterator) Next() bool {
+    //调用 populateWithDelGenericSeriesIterator.next
+	if !p.next() {
+		return false
+	}
+
+	p.curr = p.currChkMeta
+	if p.currDelIter == nil {
+		return true
+	}
+
+	// Re-encode the chunk if iterator is provider. This means that it has some samples to be deleted or chunk is opened.
+	newChunk := chunkenc.NewXORChunk()
+	app, err := newChunk.Appender()
+	if err != nil {
+		p.err = err
+		return false
+	}
+
+	if !p.currDelIter.Next() {
+		if err := p.currDelIter.Err(); err != nil {
+			p.err = errors.Wrap(err, "iterate chunk while re-encoding")
+			return false
+		}
+
+		// Empty chunk, this should not happen, as we assume full deletions being filtered before this iterator.
+		p.err = errors.Wrap(err, "populateWithDelChunkSeriesIterator: unexpected empty chunk found while rewriting chunk")
+		return false
+	}
+
+	t, v := p.currDelIter.At()
+	p.curr.MinTime = t
+	app.Append(t, v)
+
+	for p.currDelIter.Next() {
+		t, v = p.currDelIter.At()
+		app.Append(t, v)
+	}
+	if err := p.currDelIter.Err(); err != nil {
+		p.err = errors.Wrap(err, "iterate chunk while re-encoding")
+		return false
+	}
+
+	p.curr.Chunk = newChunk
+	p.curr.MaxTime = t
+	return true
+}
+
+func (p *populateWithDelChunkSeriesIterator) At() chunks.Meta { return p.curr }
+
 ~~~
 
 

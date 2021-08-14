@@ -63,7 +63,7 @@ file, we can use the size to determine how much to read in a given IO.
 │                                   Index                                    │
 ├─────────┬─────────┬──────┬───────┬─────────┬─────────┬────────┬────────┬───┤
 │ Key Len │   Key   │ Type │ Count │Min Time │Max Time │ Offset │  Size  │...│
-│ 2 bytes │ N bytes │1 byte│2  │ 8 bytes │ 8 bytes │8 bytes │4 bytes │   │
+│ 2 bytes │ N bytes │1 byte│2 bytes│ 8 bytes │ 8 bytes │8 bytes │4 bytes │   │
 └─────────┴─────────┴──────┴───────┴─────────┴─────────┴────────┴────────┴───┘
 
 The last section is the footer that stores the offset of the start of the index.
@@ -913,6 +913,14 @@ cacheKeyIterator 是以chan为基础的迭代器，负责将数据序列化
 
 ##### NewCacheKeyIterator
 
+参数：
+
+* size 指定每个块的最大point数目，默认1000
+
+
+
+
+
 * 调用cache.Keys()返回所有的key
 
 ~~~go
@@ -971,6 +979,7 @@ func (c *cacheKeyIterator) encode() {
 			defer putIntegerEncoder(ienc)
 
 			for {
+                //为啥不是直接atomic.AddUint64(&idx, 1)
 				i := int(atomic.AddUint64(&idx, uint64(chunkSize))) - chunkSize
 
 				if i >= n {
@@ -1036,6 +1045,7 @@ func (c *cacheKeyIterator) encode() {
 
 ~~~go
 func (c *cacheKeyIterator) Next() bool {
+    //对c.blocks的使用，不会有并发问题么
 	if c.i >= 0 && c.i < len(c.ready) && len(c.blocks[c.i]) > 0 {
 		c.blocks[c.i] = c.blocks[c.i][1:]
 		if len(c.blocks[c.i]) > 0 {
@@ -1045,6 +1055,7 @@ func (c *cacheKeyIterator) Next() bool {
     //c.i的初始值是-1
 	c.i++
 
+    //读完
 	if c.i >= len(c.ready) {
 		return false
 	}
@@ -1075,285 +1086,19 @@ func (c *cacheKeyIterator) Read() ([]byte, int64, int64, []byte, error) {
 
 
 
-## FileStore
 
 
 
-##### FileStore的定义
 
-~~~go
-// FileStore is an abstraction around multiple TSM files.
-type FileStore struct {
-	mu           sync.RWMutex
-	lastModified time.Time
-	// Most recently known file stats. If nil then stats will need to be
-	// recalculated
-	lastFileStats []FileStat
 
-	currentGeneration int
-	dir               string
 
-	files           []TSMFile
-	tsmMMAPWillNeed bool          // If true then the kernel will be advised MMAP_WILLNEED for TSM files.
-	openLimiter     limiter.Fixed // limit the number of concurrent opening TSM files.
 
-	logger       *zap.Logger // Logger to be used for important messages
-	traceLogger  *zap.Logger // Logger to be used when trace-logging is on.
-	traceLogging bool
 
-	stats  *FileStoreStatistics
-	purger *purger
 
-	currentTempDirID int
 
-	parseFileName ParseFileNameFunc
 
-	obs tsdb.FileStoreObserver
-}
-~~~
 
 
 
-## TSMWriter
 
-定义在tsdb/engine/writer.go 中
-
-##### TSMWriter 接口的定义
-
-~~~go
-// TSMWriter writes TSM formatted key and values.
-type TSMWriter interface {
-	// Write writes a new block for key containing and values.  Writes append
-	// blocks in the order that the Write function is called.  The caller is
-	// responsible for ensuring keys and blocks are sorted appropriately.
-	// Values are encoded as a full block.  The caller is responsible for
-	// ensuring a fixed number of values are encoded in each block as well as
-	// ensuring the Values are sorted. The first and last timestamp values are
-	// used as the minimum and maximum values for the index entry.
-	Write(key []byte, values Values) error
-
-	// WriteBlock writes a new block for key containing the bytes in block.  WriteBlock appends
-	// blocks in the order that the WriteBlock function is called.  The caller is
-	// responsible for ensuring keys and blocks are sorted appropriately, and that the
-	// block and index information is correct for the block.  The minTime and maxTime
-	// timestamp values are used as the minimum and maximum values for the index entry.
-	WriteBlock(key []byte, minTime, maxTime int64, block []byte) error
-
-	// WriteIndex finishes the TSM write streams and writes the index.
-	WriteIndex() error
-
-	// Flushes flushes all pending changes to the underlying file resources.
-	Flush() error
-
-	// Close closes any underlying file resources.
-	Close() error
-
-	// Size returns the current size in bytes of the file.
-	Size() uint32
-
-	Remove() error
-}
-~~~
-
-
-
-##### IndexWriter
-
-~~~go
-// IndexWriter writes a TSMIndex.
-type IndexWriter interface {
-	// Add records a new block entry for a key in the index.
-	Add(key []byte, blockType byte, minTime, maxTime int64, offset int64, size uint32)
-
-	// Entries returns all index entries for a key.
-	Entries(key []byte) []IndexEntry
-
-	// KeyCount returns the count of unique keys in the index.
-	KeyCount() int
-
-	// Size returns the size of a the current index in bytes.
-	Size() uint32
-
-	// MarshalBinary returns a byte slice encoded version of the index.
-	MarshalBinary() ([]byte, error)
-
-	// WriteTo writes the index contents to a writer.
-	WriteTo(w io.Writer) (int64, error)
-
-	Close() error
-
-	Remove() error
-}
-
-~~~
-
-
-
-##### 
-
-##### NewTSMWriter、NewTSMWriterWithDiskBuffer
-
-~~~go
-// NewTSMWriter returns a new TSMWriter writing to w.
-func NewTSMWriter(w io.Writer) (TSMWriter, error) {
-	index := NewIndexWriter()
-	return &tsmWriter{
-        wrapped: w, 
-        w: bufio.NewWriterSize(w, 1024*1024), 
-        index: index
-    }, nil
-}
-
-// NewTSMWriterWithDiskBuffer returns a new TSMWriter writing to w and will use a disk
-// based buffer for the TSM index if possible.
-func NewTSMWriterWithDiskBuffer(w io.Writer) (TSMWriter, error) {
-	var index IndexWriter
-	// Make sure is a File so we can write the temp index alongside it.
-	if fw, ok := w.(syncer); ok {
-		f, err := os.OpenFile(strings.TrimSuffix(fw.Name(), ".tsm.tmp")+".idx.tmp", os.O_CREATE|os.O_RDWR|os.O_EXCL, 0666)
-		if err != nil {
-			return nil, err
-		}
-		index = NewDiskIndexWriter(f)
-	} else {
-		// w is not a file, just use an inmem index
-		index = NewIndexWriter()
-	}
-
-	return &tsmWriter{wrapped: w, 
-                      w: bufio.NewWriterSize(w, 1024*1024), 
-                      index: index
-                     }, nil
-}
-~~~
-
-
-
-##### directIndex
-
-~~~go
-// directIndex is a simple in-memory index implementation for a TSM file.  The full index
-// must fit in memory.
-type directIndex struct {
-	keyCount int
-	size     uint32
-
-	// The bytes written count of when we last fsync'd
-	lastSync uint32
-	fd       *os.File
-	buf      *bytes.Buffer
-
-	f syncer
-
-	w *bufio.Writer
-
-	key          []byte
-	indexEntries *indexEntries
-}
-~~~
-
-
-
-##### NewIndexWriter、NewDiskIndexWriter
-
-~~~go
-// NewIndexWriter returns a new IndexWriter.
-func NewIndexWriter() IndexWriter {
-	buf := bytes.NewBuffer(make([]byte, 0, 1024*1024))
-	return &directIndex{
-        buf: buf, 
-        w: bufio.NewWriter(buf)
-    }
-}
-
-// NewIndexWriter returns a new IndexWriter.
-func NewDiskIndexWriter(f *os.File) IndexWriter {
-	return &directIndex{fd: f, w: bufio.NewWriterSize(f, 1024*1024)}
-}
-~~~
-
-
-
-### tsmWriter
-
-
-
-~~~go
-// tsmWriter writes keys and values in the TSM format
-type tsmWriter struct {
-	wrapped io.Writer
-	w       *bufio.Writer
-	index   IndexWriter
-	n       int64
-
-	// The bytes written count of when we last fsync'd
-	lastSync int64
-}
-~~~
-
-
-
-##### tsmWriter.WriteBlock
-
-~~~go
-// WriteBlock writes block for the given key and time range to the TSM file.  If the write
-// exceeds max entries for a given key, ErrMaxBlocksExceeded is returned.  This indicates
-// that the index is now full for this key and no future writes to this key will succeed.
-func (t *tsmWriter) WriteBlock(key []byte, minTime, maxTime int64, block []byte) error {
-	if len(key) > maxKeyLength {
-		return ErrMaxKeyLengthExceeded
-	}
-
-	// Nothing to write
-	if len(block) == 0 {
-		return nil
-	}
-
-	blockType, err := BlockType(block)
-	if err != nil {
-		return err
-	}
-
-	// Write header only after we have some data to write.
-	if t.n == 0 {
-		if err := t.writeHeader(); err != nil {
-			return err
-		}
-	}
-
-	var checksum [crc32.Size]byte
-	binary.BigEndian.PutUint32(checksum[:], crc32.ChecksumIEEE(block))
-
-	_, err = t.w.Write(checksum[:])
-	if err != nil {
-		return err
-	}
-
-	n, err := t.w.Write(block)
-	if err != nil {
-		return err
-	}
-	n += len(checksum)
-
-	// Record this block in index
-	t.index.Add(key, blockType, minTime, maxTime, t.n, uint32(n))
-
-	// Increment file position pointer (checksum + block len)
-	t.n += int64(n)
-
-	// fsync the file periodically to avoid long pauses with very big files.
-	if t.n-t.lastSync > fsyncEvery {
-		if err := t.sync(); err != nil {
-			return err
-		}
-		t.lastSync = t.n
-	}
-
-	if len(t.index.Entries(key)) >= maxIndexEntries {
-		return ErrMaxBlocksExceeded
-	}
-
-	return nil
-}
-~~~
 
