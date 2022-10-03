@@ -2,6 +2,87 @@
 
 [TOC]
 
+### 注意事项
+
+ebpf代码不能使用string.h中的函数
+
+### helpers
+
+
+
+#### kernel
+
+map相关函数的头文件/usr/include/linux/bpf.h
+
+bpf_map_update_elem
+
+~~~
+int bpf_map_update_elem(struct bpf_map *map, const void *key, const void *value, u64 flags)
+ *      Description
+ *              Add or update the value of the entry associated to *key* in
+ *              *map* with *value*. *flags* is one of:
+ *
+ *              **BPF_NOEXIST**
+ *                      The entry for *key* must not exist in the map.
+ *              **BPF_EXIST**
+ *                      The entry for *key* must already exist in the map.
+ *              **BPF_ANY**
+ *                      No condition on the existence of the entry for *key*.
+ *
+ *              Flag value **BPF_NOEXIST** cannot be used for maps of types
+ *              **BPF_MAP_TYPE_ARRAY** or **BPF_MAP_TYPE_PERCPU_ARRAY**  (all
+ *              elements always exist), the helper would return an error.
+ *      Return
+ *              0 on success, or a negative error in case of failure.
+~~~
+
+
+
+bpf_map_lookup_elem
+
+~~~
+* void *bpf_map_lookup_elem(struct bpf_map *map, const void *key)
+ *      Description
+ *              Perform a lookup in *map* for an entry associated to *key*.
+ *      Return
+ *              Map value associated to *key*, or **NULL** if no entry was
+ *              found.
+~~~
+
+
+
+## 调试工具
+
+bpf_printk 用来输出信息，用法类似printf。bpf_printk实际是bpf_trace_printk的封装。bpf_trace_printk的输出信息可通过/sys/kernel/debug/tracing/trace_pipe查看
+
+bpf_printk的详细介绍:https://nakryiko.com/posts/bpf-tips-printk/
+
+
+
+#### userspace
+
+### 拨测
+
+* 如何将满足特征条件的包交给应用层继续处理
+* ebpf内核代码如何获取应用层的特征包规则(如url)
+
+
+
+### 常用命令
+
+加载 
+
+~~~bash
+ip link set dev lo xdpgeneric obj xdp_pass_kern.o sec xdp
+~~~
+
+卸载
+
+~~~
+ip link set dev lo xdpgeneric off
+
+~~~
+
 
 
 ## xdp
@@ -319,6 +400,16 @@ char _license[] SEC("license") = "GPL";
 * github.com/vishvananda/netlink
 * github.com/cilium/ebpf
 * xdp-tutorial
+
+
+
+
+
+### 疑问
+
+xdp 只能挂载到设备上么
+
+
 
 ## kprobe
 
