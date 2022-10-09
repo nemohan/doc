@@ -135,7 +135,7 @@ bucket索引为-1
 迭代器的bucket索引自增指向下一个bucket,若当前bucket索引超过哈希表大小且正在进行rehash， 则将迭代器指向新的哈希表(dict->ht[1]), bucket索引重置为0;
 迭代器指向bucket的第一个元素
 2) 迭代器的entry指向当前元素的下一个元素
-3) 若迭代器的entry不为空，则保存指向下一个元素的指针到nextEntry(防止当前元素被删除)
+3) 若迭代器的entry不为空，则保存指向下一个元素的指针到nextEntry(防止当前元素被删除)。<font color='red'>不能处理nextEntry指向的元素被删除的情况</font>
 
 
 ## 有意思的地方
