@@ -30,7 +30,7 @@
 
 
 
-4）requestVote和appendEntry rpc 请求等待时间设置。不设置或设置过大，可能导致节点的election timeout已经超时，而仍然在等待rpc返回结果。从而导致选举时间过长或选举阻塞
+4）requestVote和appendEntry rpc 请求超时时间设置。不设置或设置过大，可能导致节点的election timeout已经超时，而仍然在等待rpc返回结果。从而导致选举时间过长或选举阻塞
 
 
 
@@ -44,7 +44,7 @@
 
 ![image-20230725163606380](D:\个人笔记\doc\distributed-system\raft.assets\image-20230725163606380.png)
 
-commit
+何时commit log entry
 
 ![image-20230721135704697](D:\个人笔记\doc\distributed-system\raft.assets\image-20230721135704697.png)
 
@@ -56,6 +56,28 @@ leader 的commitIndex的更新：
 
 
 
+减少复制日志的rpc数目:
+
+当follower未跟上leader的日志复制节奏，且差距较大时。应该从nextIndex开始复制所有的日志到follower
+
+
+
+figure8 问题: 如何避免旧的log已经被复制到超过半数节点时，仍然可能被新的leader覆盖的问题。会导致副本不一致。
+
+1) 假设s1在term-4成为leader，将term-2、log-2的日志复制到了s2、s3。并且成功提交(commit)，然后崩溃。
+
+2) 在term-5， s5成为leader，将自己的log-2复制到其他节点时，会覆盖已经在term-4提交的log2导致副本状态不一致
+
+raft是解决这个问题的方式如下:
+
+s1在term-4成为leader，将term-2、log-2的日志复制到了s2、s3时，<font color='red'>**不做提交**</font>。只有在当前term有log复制到了超过半数节点时，才做提交
+
+![image-20230824151327622](D:\个人笔记\doc\distributed-system\raft.assets\image-20230824151327622.png)
+
+
+
+![image-20230824152013321](D:\个人笔记\doc\distributed-system\raft.assets\image-20230824152013321.png)
+
 ### 忽略的细节
 
 下面是实现raft协议时忽略的细节，导致几个bug
@@ -64,7 +86,7 @@ leader 的commitIndex的更新：
 
 * 除检查prevLogIndex、prevLogTerm是否匹配之外。还需要检查prevLogIndex+1 的log是否存在term冲突。
 
-  
+  若preveLogIndex、prevLogTerm都匹配，用AppendEntry中的日志项直接追加到本地prevLogIndex之后(logs = append(logs[:prevLogIndex+1], AppendEntry.Entries)，则不必检查重复和冲突。
 
   ~~~
   集群共有5个节点node-0到node-4
@@ -107,6 +129,14 @@ leader 的commitIndex的更新：
   ~~~
 
 
+
+## snapshot
+
+如何确定是否需要在follower上安装leader的snapshot。
+
+![image-20230831111305251](D:\个人笔记\doc\distributed-system\raft.assets\image-20230831111305251.png)
+
+## membership change
 
 
 
