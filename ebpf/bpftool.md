@@ -1,3 +1,5 @@
+
+
 # bpftool
 
 [TOC]
@@ -44,8 +46,22 @@ bpftool cgroup tree /sys/fs/cgroup/unified/ebpf_cgroup_test
 
 bpftool 5.4版本不支持
 
+
+
 ~~~
 bpftool gen skeleton kprobe_kern.o > kprobe.h
+~~~
+
+
+
+
+
+### btf
+
+生成vmlinux.h文件, vmlinux.h文件目的参考: https://www.kernel.org/doc/html/latest/bpf/libbpf/libbpf_overview.html。使用vmlinux.h可以避免引用一些kernel未暴露出来的头文件，不然需要在samples/bpf/目录下编译
+
+~~~
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 ~~~
 
 

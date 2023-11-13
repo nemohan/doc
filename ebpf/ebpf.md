@@ -8,17 +8,19 @@
 
 
 
-## ebpf程序可使用的helper 函数
-
-https://www.man7.org/linux/man-pages/man7/bpf-helpers.7.html
-
-
-
 ## 调试工具
 
 bpf_printk 用来输出信息，用法类似printf。bpf_printk实际是bpf_trace_printk的封装。bpf_trace_printk的输出信息可通过/sys/kernel/debug/tracing/trace_pipe查看,亦或通过bpftool prog tracelog查看
 
 bpf_printk的详细介绍:https://nakryiko.com/posts/bpf-tips-printk/
+
+### 反编译bpf字节码
+
+~~~
+llvm-objdump -o --source x.o
+~~~
+
+
 
 ## bpf 内核源码
 
@@ -59,17 +61,31 @@ bpf_printk的详细介绍:https://nakryiko.com/posts/bpf-tips-printk/
 
 ![image-20231030102132606](D:\个人笔记\doc\epbf\ebpf.assets\image-20231030102132606.png)
 
-## kprobe
 
-### 挂载（attach)
 
-##### load_and_attach
+### 访问内核定义的某个结构体
 
-load_and_attach 定义在 samples/bpf/bpf_load.c 中，用于挂载kprobe。
+直接访问某个内核定义的结构体会导致无效内存访问的错误，可以使用BPF_CORE_READ来避免上述错误
 
-* 将被kprobe跟踪的`事件名称`追加到 /sys/kernel/debug/tracing/kprobe_events 文件中，`事件名称`的具体格式见代码
-* 从文件 /sys/kernel/debug/tracing/events/kprobes/$event_prefix_$event/id，读取一个ID。该id用来设置perf_event_attr.id字段。在
-* 调用系统调用perf_event_open
+~~~c
+SEC("kprobe/__nf_conntrack_hash_insert")
+int kprobe__nf_conntrack_hash_insert(struct pt_regs *ctx){
+    struct nf_conn *ct = (struct nf_conn *)PT_REGS_PARM1(ctx);
+    unsigned int hash = (unsigned int) PT_REGS_PARM2(ctx);
+    unsigned int reply_hash = (unsigned int)PT_REGS_PARM3(ctx);
+    bpf_printk("nf_conntrack_hash_insert\n");
+    //struct nf_conntrack_tuple *src_tuple = &ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple;
+    //struct nf_conntrack_tuple *src_tuple = BPF_CORE_READ(ct, tuplehash);
+    struct  nf_conntrack_tuple_hash *tuple_hash= BPF_CORE_READ(ct, tuplehash);
+    struct nf_conntrack_tuple *src_tuple = &(tuple_hash[IP_CT_DIR_ORIGINAL].tuple);
+}
+~~~
+
+
+
+### 如何关联kprobe/uprobe的函数入参和返回值
+
+使用bpf_get_current_pid_tgid 获取的id作为map的key, 关联kprobe/uprobe的上下文信息，会不会有问题(并发问题)。tgid用于标识进程，pid用于标识线程。一个线程不会有并发应该不会有问题。
 
 
 
@@ -89,14 +105,14 @@ load_and_attach 定义在 samples/bpf/bpf_load.c 中，用于挂载kprobe。
   - 4096 条指令限制（ `BPF_MAXINSNS` ）仍然是 保留给非特权 BPF 程序
   - 新版本的eBPF还支持级联调用多个eBPF程序(不过传递信息方面存在一定限制)，可以组合起来实现更多强大功能
 
-### 遇到的问题
 
-写入"p:sys_get_uid sys_get_uid" 到文件时 /sys/kernel/debug/tracing/kprobe_events ，出现"No such file or directory"。开始以为是文件 /sys/kernel/debug/tracing/kprobe_events 不存在导致的，但是发现该文件确实存在，就有点迷惑了。后面尝试将"p:tcp_sendmsg tcp_sendmsg"写入时，写入成功。说明写入该文件的内容应该和内核暴露的跟踪点有关，每种跟踪点的格式可能不同
 
-![1612071434240](${img}/1612071434240.png)
-
-## 参考
+## 参考文档
 
 * 内核源码 samples/bpf/bpf_load.c
-
 * bpf 文档 https://docs.kernel.org/bpf/index.html
+* xdp https://github.com/xdp-project/xdp-tools
+
+* The eXpress Data Path: Fast Programmable Packet Processing in the Operating System Kernel https://dl.acm.org/doi/pdf/10.1145/3281411.3281443
+* ebpf程序可使用的helper 函数文档 https://www.man7.org/linux/man-pages/man7/bpf-helpers.7.html
+* libbpf-bootstrap、libbpf
