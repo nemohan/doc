@@ -39,6 +39,26 @@ bpftool cgroup detach /sys/fs/cgroup/unified/ebpf_cgroup_test/ connect4 id 59
 
 
 
+## cgroup 相关的bpf 程序类型
+
+~~~
+In RHEL, you can use multiple types of eBPF programs that you can attach to a cgroup. The kernel executes these programs when a program in the given cgroup performs an operation. Note that you can use only cgroups version 2.
+
+The following networking-related cgroup eBPF programs are available in RHEL:
+
+BPF_PROG_TYPE_SOCK_OPS: The kernel calls this program on various TCP events. The program can adjust the behavior of the kernel TCP stack, including custom TCP header options, and so on.
+
+BPF_PROG_TYPE_CGROUP_SOCK_ADDR: The kernel calls this program during connect, bind, sendto, recvmsg, getpeername, and getsockname operations. This program allows changing IP addresses and ports. This is useful when you implement socket-based network address translation (NAT) in eBPF.
+
+BPF_PROG_TYPE_CGROUP_SOCKOPT: The kernel calls this program during setsockopt and getsockopt operations and allows changing the options.
+BPF_PROG_TYPE_CGROUP_SOCK: The kernel calls this program during socket creation, socket releasing, and binding to addresses. You can use these programs to allow or deny the operation, or only to inspect socket creation for statistics.
+
+BPF_PROG_TYPE_CGROUP_SKB: This program filters individual packets on ingress and egress, and can accept or reject packets.
+BPF_PROG_TYPE_CGROUP_SYSCTL: This program allows filtering of access to system controls (sysctl).
+~~~
+
+
+
 ## 遇到的问题
 
 ### 问题1：
@@ -83,6 +103,8 @@ static int bind_hook(struct bpf_sock_addr *sk) {
 ### 问题2：
 
 在Ubuntu 20.04 LTS, 内核版本Linux 5.4.0-165-generic #182-Ubuntu SMP Mon Oct 2 19:43:28 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux的系统上测试时(系统同时挂载了cgroup v1和cgroup v2, cgroup v2 挂载在/sys/fs/cgroup/unified目录下)。尝试挂载到cgroup v1的某个层级的子目录时比如/sys/fs/cgroup/cpu/ebpf_cgroup_test 时报EBADF错误
+
+<font color='red'>cgroup 类型ebpf程序支持cgroup v1么</font>
 
 ### 问题2 剖析
 

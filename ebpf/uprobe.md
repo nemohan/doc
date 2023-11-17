@@ -220,67 +220,13 @@ nm --dynamic /usr/lib/x86_64-linux-gnu/libssl.so.1.1
 
 
 
-~~~c
-static inline struct rtable *ip_route_newports(struct flowi4 *fl4, struct rtable *rt,
-					       __be16 orig_sport, __be16 orig_dport,
-					       __be16 sport, __be16 dport,
-					       struct sock *sk)
-{
-	if (sport != orig_sport || dport != orig_dport) {
-		fl4->fl4_dport = dport;
-		fl4->fl4_sport = sport;
-		ip_rt_put(rt);
-		flowi4_update_output(fl4, sk->sk_bound_dev_if,
-				     RT_CONN_FLAGS(sk), fl4->daddr,
-				     fl4->saddr);
-		security_sk_classify_flow(sk, flowi4_to_flowi(fl4));
-		return ip_route_output_flow(sock_net(sk), fl4, sk);
-	}
-	return rt;
-}
-~~~
 
 
 
-### 本地临时端口分配
-
-~~~
-inet_hash_connect
-__inet_hash_connect
-inet_bind_hash
-~~~
-
-### 为sock分配fd
-
-~~~c
-static int sock_map_fd(struct socket *sock, int flags)
-{
-	struct file *newfile;
-	int fd = get_unused_fd_flags(flags);
-	if (unlikely(fd < 0)) {
-		sock_release(sock);
-		return fd;
-	}
-
-	newfile = sock_alloc_file(sock, flags, NULL);
-	if (!IS_ERR(newfile)) {
-		fd_install(fd, newfile);
-		return fd;
-	}
-
-	put_unused_fd(fd);
-	return PTR_ERR(newfile);
-}
-~~~
 
 
 
-### 获取connect使用的五元组及文件描述符
 
-~~~
-hook __sys_connect 获取fd
-inet_bind_hash 获取本地临时端口
-~~~
 
 
 

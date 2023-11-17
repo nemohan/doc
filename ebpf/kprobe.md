@@ -212,31 +212,208 @@ int kprobe_tcp_connect(struct pt_regs *ctx){
 
 ## 如何确定socket fd关联的五元组
 
+~~~
+bpf_sock_from_file
+~~~
+
+
+
 ~~~c
-struct socket *sock_from_file(struct file *file, int *err)
-{
-	if (file->f_op == &socket_file_ops)
-		return file->private_data;	/* set in sock_map_fd */
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_core_read.h>
+#include <bpf/bpf_tracing.h>
+#include <bpf/bpf_endian.h>
 
-	*err = -ENOTSOCK;
-	return NULL;
+
+#define BPF_ANY		0 /* create new element or update existing */
+#define BPF_NOEXIST	1 /* create new element if it didn't exist */
+#define BPF_EXIST	2 /* update existing element */
+#define BPF_F_LOCK	4 /* spin_lock-ed map_lookup/map_update */
+
+
+
+typedef __u32 u32;
+typedef __u64 u64;
+
+
+struct tuple{
+    u32 src_ip;
+    u32 dst_ip;
+    u16 src_port;
+    u16 dst_port;
+};
+
+struct sockfd{
+    u32 fd;
+    struct tuple tuple;
+};
+
+struct bpf_map_def SEC("maps") fd_map ={
+    .type = BPF_MAP_TYPE_HASH,
+    .key_size = sizeof(u64),
+    .value_size = 1,
+    .max_entries = 512 * 10,
+};
+
+struct bpf_map_def SEC("maps") pid_map = {
+    .type = BPF_MAP_TYPE_HASH,
+    .key_size = sizeof(u32),
+    .value_size = sizeof(u32),
+    .max_entries = 1,
+};
+
+struct bpf_map_def SEC("maps") file_fd_map = {
+    .type = BPF_MAP_TYPE_HASH,
+    .key_size = sizeof(u64),
+    .value_size = sizeof(u32),
+    .max_entries = 512 * 10,
+};
+
+struct bpf_map_def SEC("maps") fd_sock_addr_map ={
+    .type = BPF_MAP_TYPE_HASH,
+    .key_size = sizeof(u32),
+    .value_size = sizeof(struct sockfd),
+    .max_entries = 512 * 10,
+};
+struct bpf_map_def SEC("maps") perf_event_map ={
+    .type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
+    .key_size = sizeof(int),
+    .value_size = 0,
+    .max_entries = 8,
+};
+
+
+static __always_inline u32 get_tgid(){
+    return bpf_get_current_pid_tgid() >> 32;
+}
+static __always_inline u32 get_taskid(){
+    return bpf_get_current_pid_tgid() & 0XFFFFFFFF;
+}
+static __always_inline u64 get_pid_tgid(){
+    return bpf_get_current_pid_tgid();
 }
 
-struct socket *sockfd_lookup(int fd, int *err)
-{
-	struct file *file;
-	struct socket *sock;
 
-	file = fget(fd);
-	if (!file) {
-		*err = -EBADF;
-		return NULL;
-	}
-
-	sock = sock_from_file(file, err);
-	if (!sock)
-		fput(file);
-	return sock;
+static __always_inline bool can_continue(){
+    u32 key = 1;
+    u32 *value = bpf_map_lookup_elem(&pid_map, &key);
+    if (!value){
+        return false;
+    }
+    u32 tgid = get_tgid();
+    return tgid == *value;
 }
+
+//获取fd 以及sock地址, fd要和pid结合
+SEC("kprobe/__sys_connect")
+int BPF_KPROBE(kprobe____sys_connect, int fd, struct sockaddr *uservaddr, int addrlen){
+    if (!can_continue()){
+        return 0;
+    }
+    u64 pid_tgid = get_pid_tgid();
+    bpf_printk("sys_connect pid:%u tid:%u fd:%d\n", pid_tgid >> 32, pid_tgid & 0XFFFFFFFF, fd);
+    struct sockfd value = {.fd = fd};
+    bpf_map_update_elem(&fd_sock_addr_map, &fd, &value, BPF_ANY);
+    return 0;
+}
+
+SEC("kprobe/tcp_v4_connect")
+int BPF_KPROBE(kprobe____tcp_v4_connect,struct sock *sk, struct sockaddr *uaddr, int addr_len){
+    if (!can_continue()){
+        return 0;
+    }
+    struct socket *psocket = BPF_CORE_READ(sk,sk_socket);
+    u64 key = (u64)BPF_CORE_READ(psocket,file);
+    u32 *pfd = bpf_map_lookup_elem(&file_fd_map, &key); 
+    if (!pfd){
+        bpf_printk("tcp_v4_connect. no fd for key:%llu \n", key);
+        return 0;
+    }
+    bpf_printk("tcp_v4_connect fd:%d key:%llu\n", *pfd, key);
+    struct sockfd *sockfd = bpf_map_lookup_elem(&fd_sock_addr_map, pfd);
+    if (!sockfd){
+        bpf_printk("tcp_v4_connect no fd:%d found in fd_sock_addr_map\n", *pfd);
+        return 0;
+    }
+    struct sockaddr_in usin;
+    bpf_core_read(&usin, sizeof(usin), uaddr);
+    //struct sockfd sockfd;
+    sockfd->fd = *pfd;
+    sockfd->tuple.dst_port = usin.sin_port;
+    sockfd->tuple.dst_ip = usin.sin_addr.s_addr;
+    bpf_printk("dst_ip:%d port:%d\n", usin.sin_addr.s_addr, usin.sin_port);
+
+
+    /*
+    int ret =0;
+    if ((ret = bpf_map_update_elem(&fd_sock_addr_map, pfd, &sockfd, BPF_ANY)) < 0){
+        bpf_printk("tcp_v4_connect update fd_sock_addr_map failed. %d\n", ret);
+    }
+    */
+    return 0;
+}
+
+//建立file 到fd的映射关系
+SEC("kprobe/fd_install")
+int BPF_KPROBE(kprobe____fd_install, unsigned int fd, struct file *file){
+//int kprobe____fd_install(struct pt_regs *ctx){
+    if (!can_continue()){
+        return 0;
+    }
+    /*
+    void *pvalue =  bpf_map_lookup_elem(&fd_map, &fd); 
+    if (!pvalue){
+        bpf_printk("lookup fd_map failed\n");
+        return 0;
+    }
+    */
+
+    u64 ino = BPF_CORE_READ(file, f_inode, i_ino);
+    bpf_printk("fd_install fd:%d %llu\n", fd, ino);
+    //u64 key = BPF_CORE_READ(file, f_inode, i_ino);
+    u64 key = (u64)file;
+    bpf_printk("fd_install fd:%d key:%llu\n", fd, key);
+    int ret = 0;
+    if ((ret = bpf_map_update_elem(&file_fd_map, &key, &fd, BPF_NOEXIST)) < 0){
+        bpf_printk("update file_fd_map failed.%d \n", ret);
+        return 0;
+    }
+    return 0;
+}
+
+SEC("kprobe/tcp_connect")
+int kprobe_tcp_connect(struct pt_regs *ctx){
+    if (!can_continue()){
+        return 0;
+    }
+    bpf_printk("tcp_connect\n");
+    struct sock *sk = PT_REGS_PARM1(ctx); 
+
+    struct socket *psocket = BPF_CORE_READ(sk,sk_socket);
+    u64 key = (u64)BPF_CORE_READ(psocket,file);
+    u32 *pfd = bpf_map_lookup_elem(&file_fd_map, &key); 
+    if (!pfd){
+        bpf_printk("tcp_v4_connect. no fd for key:%llu \n", key);
+        return 0;
+    }
+    struct sockfd *sockfd = bpf_map_lookup_elem(&fd_sock_addr_map, pfd);
+    if (!sockfd){
+        bpf_printk("tcp_v4_connect no fd:%d found in fd_sock_addr_map\n", *pfd);
+        return 0;
+    }
+
+    struct inet_sock *psock = (struct inet_sock*)sk;
+    sockfd->tuple.src_ip = BPF_CORE_READ(psock,inet_saddr);
+    sockfd->tuple.src_port = BPF_CORE_READ(psock,inet_sport); 
+    int ret = bpf_perf_event_output(ctx, &perf_event_map, 0xffffffffULL, sockfd, sizeof(*sockfd));
+    if (ret < 0){
+        bpf_printk("bpf_perf_event_output %d\n", ret);
+    }
+    //bpf_map_delete_elem(&fd_sock_addr_map, &pid_tgid);
+    return 0;
+}
+
+char _license[] SEC("license") = "GPL";
 ~~~
 

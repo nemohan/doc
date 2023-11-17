@@ -8,6 +8,8 @@
 
 ### 使用iproute2 
 
+iproute2实际使用的netlink挂载xdp程序
+
 ~~~bash
 ip link set dev enp0s8 xdp obj program.o sec mysection
 ~~~
@@ -16,6 +18,44 @@ ip link set dev enp0s8 xdp obj program.o sec mysection
 
 ~~~
 ip link set dev enp0s8 xdp off
+~~~
+
+
+
+### golang使用netlink挂载
+
+~~~go
+import(
+    	"github.com/vishvananda/netlink"
+	"github.com/cilium/ebpf"
+)
+func attachXDP(){
+	spec, err := ebpf.LoadCollectionSpec("xdp_prog_kern.o")
+	if err != nil{
+		panic(err)
+	}
+
+	var objs struct {
+		Prog  *ebpf.Program `ebpf:"xdp_stats1_func"`
+		Stats *ebpf.Map     `ebpf:"xdp_stats_map"`
+	}
+
+	if err := spec.LoadAndAssign(&objs, nil); err != nil {
+		panic(err)
+	}
+	defer objs.Prog.Close()
+	defer objs.Stats.Close()
+
+	lo, err := netlink.LinkByName("lo")
+	if err != nil{
+		panic(err)
+	}
+	
+	if err := netlink.LinkSetXdpFd(lo, objs.Prog.FD()); err != nil{
+		panic(err)
+	}
+}	
+
 ~~~
 
 
