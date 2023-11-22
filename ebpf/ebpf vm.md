@@ -16,6 +16,8 @@ enum bpf_func_id {
 
 ## verifier
 
+check_helper_call检查使用的帮助函数是否有效
+
 ~~~c
 static int check_helper_call(struct bpf_verifier_env *env, int func_id, int insn_idx)
 {

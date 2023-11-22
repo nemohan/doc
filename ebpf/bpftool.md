@@ -54,6 +54,25 @@ bpftool gen skeleton kprobe_kern.o > kprobe.h
 
 
 
+### net
+
+用于挂载xdp、tc类型ebpf程序
+
+~~~
+Usage: /usr/lib/linux-tools/5.4.0-166-generic/bpftool net { show | list } [dev <devname>]
+       /usr/lib/linux-tools/5.4.0-166-generic/bpftool net attach ATTACH_TYPE PROG dev <devname> [ overwrite ]
+       /usr/lib/linux-tools/5.4.0-166-generic/bpftool net detach ATTACH_TYPE dev <devname>
+       /usr/lib/linux-tools/5.4.0-166-generic/bpftool net help
+
+       PROG := { id PROG_ID | pinned FILE | tag PROG_TAG }
+       ATTACH_TYPE := { xdp | xdpgeneric | xdpdrv | xdpoffload }
+
+Note: Only xdp and tc attachments are supported now.
+      For progs attached to cgroups, use "bpftool cgroup"
+      to dump program attachments. For program types
+      sk_{filter,skb,msg,reuseport} and lwt/
+~~~
+
 
 
 ### btf
@@ -74,5 +93,10 @@ bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 bpftool prog tracelog
 ~~~
 
+## 源码
 
+bpftool源码位于内核 tools/bpf/bpftool目录下
 
+## 参考
+
+* bpftool命令教程  https://qmonnet.github.io/whirl-offload/2021/09/23/bpftool-features-thread/
