@@ -14,7 +14,9 @@ bpf_sk_cgroup_id
 
 ## bpftool管理挂载到cgroup上的ebpf程序
 
-bpftool貌似不支持cgroup v1
+bpftool貌似不支持cgroup v1.
+
+cgroup相关ebpf程序应该都是挂载到cgroupv2文件系统的上的某个目录的文件描述符
 
 挂载:
 
@@ -41,20 +43,115 @@ bpftool cgroup detach /sys/fs/cgroup/unified/ebpf_cgroup_test/ connect4 id 59
 
 ## cgroup 相关的bpf 程序类型
 
+| 程序类型                       | SEC                                                          | attach type                                                  | 描述                                                         |
+| ------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| BPF_PROG_TYPE_SOCK_OPS         | sockops                                                      | BPF_CGROUP_SOCK_OPS                                          | The kernel calls this program on various TCP events. The program can adjust the behavior of the kernel TCP stack, including custom TCP header options, and so on. |
+| BPF_PROG_TYPE_CGROUP_SOCK_ADDR | BPF_CGROUP_INET4_BIND<br/>cgroup/bind4<br/><br/>BPF_CGROUP_INET4_CONNECT<br/>cgroup/connect4<br/><br/>BPF_CGROUP_INET4_GETPEERNAME<br/>cgroup/getpeername4<br/><br/>BPF_CGROUP_INET4_GETSOCKNAME<br/>cgroup/getsockname4<br/><br/>BPF_CGROUP_INET6_BIND<br/>cgroup/bind6<br/><br/>BPF_CGROUP_INET6_CONNECT<br/>cgroup/connect6<br/><br/>BPF_CGROUP_INET6_GETPEERNAME<br/>cgroup/getpeername6<br/><br/>BPF_CGROUP_INET6_GETSOCKNAME<br/>cgroup/getsockname6<br/><br/>BPF_CGROUP_UDP4_RECVMSG<br/>cgroup/recvmsg4<br/><br/>BPF_CGROUP_UDP4_SENDMSG<br/>cgroup/sendmsg4<br/><br/>BPF_CGROUP_UDP6_RECVMSG<br/>cgroup/recvmsg6<br/><br/>BPF_CGROUP_UDP6_SENDMSG<br/>cgroup/sendmsg6<br/><br/>BPF_CGROUP_UNIX_CONNECT<br/>cgroup/connect_unix<br/><br/>BPF_CGROUP_UNIX_SENDMSG<br/>cgroup/sendmsg_unix<br/><br/>BPF_CGROUP_UNIX_RECVMSG<br/>cgroup/recvmsg_unix<br/><br/>BPF_CGROUP_UNIX_GETPEERNAME<br/>cgroup/getpeername_unix<br/><br/>BPF_CGROUP_UNIX_GETSOCKNAME<br/>cgroup/getsockname_unix |                                                              | he kernel calls this program during connect, bind, sendto, recvmsg, getpeername, and getsockname operations. This program allows changing IP addresses and ports. This is useful when you implement socket-based network address translation (NAT) in eBPF. |
+| BPF_PROG_TYPE_CGROUP_SOCKOPT   | BPF_CGROUP_GETSOCKOPT<br />BPF_CGROUP_SETSOCKOPT             | cgroup/getsockopt<br />cgroup/setsockopt                     | The kernel calls this program during setsockopt and getsockopt operations and allows changing the options. |
+| BPF_PROG_TYPE_CGROUP_SOCK      | BPF_CGROUP_INET4_POST_BIND<br />BPF_CGROUP_INET6_POST_BIND<br />BPF_CGROUP_INET_SOCK_CREATE<br />BPF_CGROUP_INET_SOCK_RELEASE | cgroup/post_bind4<br />cgroup/post_bind6<br /><br />cgroup/sock_create<br />cgroup/sock<br />cgroup/sock_release | The kernel calls this program during socket creation, socket releasing, and binding to addresses. You can use these programs to allow or deny the operation, or only to inspect socket creation for statistics. |
+| BPF_PROG_TYPE_CGROUP_SKB       | BPF_CGROUP_INET_EGRESS<br />BPF_CGROUP_INET_INGRESS          | cgroup_skb/egress<br />cgroup_skb/ingress                    | This program filters individual packets on ingress and egress, and can accept or reject packets. |
+| BPF_PROG_TYPE_CGROUP_SYSCTL    | cgroup/sysctl                                                | BPF_CGROUP_SYSCTL                                            | This program allows filtering of access to system controls (sysctl). |
+| BPF_PROG_TYPE_CGROUP_DEVICE    | BPF_CGROUP_DEVICE                                            | cgroup/dev                                                   |                                                              |
+
+
+
+注意:
+
 ~~~
 In RHEL, you can use multiple types of eBPF programs that you can attach to a cgroup. The kernel executes these programs when a program in the given cgroup performs an operation. Note that you can use only cgroups version 2.
 
-The following networking-related cgroup eBPF programs are available in RHEL:
+~~~
 
-BPF_PROG_TYPE_SOCK_OPS: The kernel calls this program on various TCP events. The program can adjust the behavior of the kernel TCP stack, including custom TCP header options, and so on.
+## 代码示例
 
-BPF_PROG_TYPE_CGROUP_SOCK_ADDR: The kernel calls this program during connect, bind, sendto, recvmsg, getpeername, and getsockname operations. This program allows changing IP addresses and ports. This is useful when you implement socket-based network address translation (NAT) in eBPF.
+### BPF_PROG_TYPE_SOCK_OPS
 
-BPF_PROG_TYPE_CGROUP_SOCKOPT: The kernel calls this program during setsockopt and getsockopt operations and allows changing the options.
-BPF_PROG_TYPE_CGROUP_SOCK: The kernel calls this program during socket creation, socket releasing, and binding to addresses. You can use these programs to allow or deny the operation, or only to inspect socket creation for statistics.
+可以修改tcp选项
 
-BPF_PROG_TYPE_CGROUP_SKB: This program filters individual packets on ingress and egress, and can accept or reject packets.
-BPF_PROG_TYPE_CGROUP_SYSCTL: This program allows filtering of access to system controls (sysctl).
+~~~c
+SEC("sockops")
+int bpf_sockmap(struct bpf_sock_ops *skops)
+{
+	__u32 lport, rport;
+	int op, err = 0, index, key, ret;
+
+
+	op = (int) skops->op;
+	bpf_printk("skops\n");
+	switch (op) {
+	case BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB:
+		lport = skops->local_port;
+		rport = skops->remote_port;
+
+		bpf_printk("accept lport:%d rport:%d\n", lport, bpf_ntohl(rport));
+		if (lport == 10000) {
+			ret = 1;
+#ifdef SOCKMAP
+			err = bpf_sock_map_update(skops, &sock_map, &ret,
+						  BPF_NOEXIST);
+#else
+			err = bpf_sock_hash_update(skops, &sock_map, &ret,
+						   BPF_NOEXIST);
+#endif
+			bpf_printk("passive(%i -> %i) map ctx update err: %d\n",
+				   lport, bpf_ntohl(rport), err);
+		}
+		break;
+	case BPF_SOCK_OPS_ACTIVE_ESTABLISHED_CB:
+		lport = skops->local_port;
+		rport = skops->remote_port;
+
+		bpf_printk("connect lport:%d rport:%d\n", lport, bpf_ntohl(rport));
+		if (bpf_ntohl(rport) == 10001) {
+			ret = 10;
+#ifdef SOCKMAP
+			err = bpf_sock_map_update(skops, &sock_map, &ret,
+						  BPF_NOEXIST);
+#else
+			err = bpf_sock_hash_update(skops, &sock_map, &ret,
+						   BPF_NOEXIST);
+#endif
+			bpf_printk("active(%i -> %i) map ctx update err: %d\n",
+				   lport, bpf_ntohl(rport), err);
+		}
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+~~~
+
+### BPF_PROG_TYPE_CGROUP_SOCK_ADDR
+
+~~~c
+//go:build ignore
+#include <linux/version.h>
+#include <linux/ptrace.h>
+//#include <uapi/linux/bpf.h>
+#include <linux/bpf.h>
+#include <linux/filter.h>
+#include <bpf/bpf_helpers.h>
+#include<bpf/bpf_endian.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+
+char __license[] SEC("license") = "Dual MIT/GPL";
+
+
+SEC("cgroup/connect4")
+static int connect_hook(struct bpf_sock_addr *sk) {
+    bpf_printk("connect hook\n");
+	return 1;
+}
+
+SEC("cgroup/bind4")
+static int bind_hook(struct bpf_sock_addr *sk) {
+    bpf_printk("bind hook\n");
+	return 1;
+}
 ~~~
 
 
@@ -289,3 +386,7 @@ struct cgroup *cgroup_get_from_fd(int fd)
 ## cgroup 类型ebpf对内核的要求
 
 * linux 5.4.0 不支持ebpf 挂载到cgroup v1
+
+## 参考
+
+* ebpf程序类型和对应的attach type https://www.kernel.org/doc/html/latest/bpf/libbpf/program_types.html

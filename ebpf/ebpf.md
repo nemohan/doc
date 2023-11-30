@@ -57,6 +57,10 @@ enum bpf_func_id {
 * make prepare
 * make M=samples/bpf 编译指定模块
 
+### 内核对ebpf的支持
+
+参考 https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md
+
 ## 遇到的问题
 
 ### 访问内核定义的某个结构体
@@ -98,7 +102,15 @@ int kprobe__nf_conntrack_hash_insert(struct pt_regs *ctx){
 
 失败，bpf_sys_bpf 在5.4内核上不支持。目前看好像只有BPF_PROG_TYPE_SYSCALL类型的program才支持使用bpf_sys_bpf函数
 
+方案3：
 
+多种类型的ebpf程序在一个文件
+
+### ebpf程序对应的SEC
+
+可在内核树tools\lib\bpf\libbpf.c文件中找到(5.4内核)
+
+![image-20231129100049155](D:\个人笔记\doc\ebpf\ebpf.assets\image-20231129100049155.png)
 
 ## 常见错误
 
@@ -168,6 +180,7 @@ load program: invalid argument: unknown func bpf_sys_bpf#166
 * 《bpf performance tools》
 * tc https://www.coverfire.com/articles/queueing-in-the-linux-network-stack/
 * https://qmonnet.github.io/whirl-offload/2016/09/01/dive-into-bpf/
+* 内核版本对ebpf的支持  https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md
 
 ### 内核相关参考文档
 

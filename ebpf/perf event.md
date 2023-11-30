@@ -24,6 +24,38 @@ ebpf程序类型 BPF_PROG_TYPE_PERF_EVENT
 
 
 
+### golang
+
+unix.PerfEventAttr和 perf_event_attr结构的对应关系:
+
+* PerfEventAttr对应 perf_event_attr 中的union { __u64 sample_period; /* Period of sampling */ __u64 sample_freq; /* Frequency of sampling */ };
+
+  
+
+~~~go
+	ncpus := runtime.NumCPU()
+	for i := 0; i < ncpus; i++ {
+		fd, err := unix.PerfEventOpen(&unix.PerfEventAttr{
+			Type:   unix.PERF_TYPE_SOFTWARE,
+			Config: unix.PERF_COUNT_SW_CPU_CLOCK,
+			Size:   unix.PERF_ATTR_SIZE_VER4,
+			Bits:   unix.PerfBitFreq,
+			Sample: 99,
+		}, os.Getpid(), -1, -1, 0)
+		if err != nil {
+			panic(err)
+		}
+		if err := unix.IoctlSetInt(fd, unix.PERF_EVENT_IOC_SET_BPF, co.Programs["bpf_prog1"].FD()); err != nil {
+			panic(err)
+		}
+		if err := unix.IoctlSetInt(fd, unix.PERF_EVENT_IOC_ENABLE, 1); err != nil {
+			panic(err)
+		}
+	}
+~~~
+
+
+
 ### 问题
 
 * 使用perf 获取调用栈信息和使用ebpf获取调用栈信息有什么区别
