@@ -1016,3 +1016,5 @@ BPF_PROG_TEST_RUN
 * libxdp代码及文档  https://github.com/xdp-project/xdp-tools/tree/master/lib/libxdp
 *  bpf示例代码  https://github.com/xdp-project/bpf-examples
 *  http://vger.kernel.org/lpc_net2018_talks/lpc18_paper_af_xdp_perf-v2.pdf
+*  af_xdp 样例代码 xdp-tutorial/advanced03-AF_XDP
+*  af_xdp样例代码 5.15内核 samples/bpf/xsk_fwd.c、xdpsock_kern.c、xdpsock_user.c
