@@ -85,7 +85,7 @@ int kprobe__nf_conntrack_hash_insert(struct pt_regs *ctx){
 
 ### 如何关联kprobe/uprobe的函数入参和返回值
 
-使用bpf_get_current_pid_tgid 获取的id((tgid用于标识进程，pid用于标识线程)作为map的key, 关联kprobe/uprobe的上下文信息，会不会有并发问题)。应该会产生lost update 问题。
+使用bpf_get_current_pid_tgid() 获取的id((tgid用于标识进程，pid用于标识线程)作为map的key, 关联kprobe/uprobe的上下文信息，会不会有并发问题)。应该会产生lost update 问题。实际发现其他产品基本上是使用的id作为map的key，为什么作为key没有问题
 
 ### 如何在不同的ebpf程序共享同一个map
 
@@ -181,6 +181,7 @@ load program: invalid argument: unknown func bpf_sys_bpf#166
 * tc https://www.coverfire.com/articles/queueing-in-the-linux-network-stack/
 * https://qmonnet.github.io/whirl-offload/2016/09/01/dive-into-bpf/
 * 内核版本对ebpf的支持  https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md
+* BPF CO-RE BPF 可移植性 https://nakryiko.com/posts/bpf-portability-and-co-re/
 
 ### 内核相关参考文档
 
