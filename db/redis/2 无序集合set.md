@@ -1,11 +1,15 @@
-# 集合
+# 无序集合
 
 [TOC]
 
 
 
+版本：7.0.5
+
+无序set的实现代码在t_set.c中。set的存储方式有两种：若待存储的数据能够以整型表示，则使用intset存储；否则，使用hash 表来存储。在创建set时确定根据值的类型来确定使用哪种存储方式。若在使用intset存储结构的过程中，遇到了不能转为整型的值，则会将存储结构转为hash类型
+
 ## 存储结构 
-若待添加到集合的值能够以整型表示，则创建编码方式为REDIS_ENCODING_INTSET的对象(intset)来存储该值。否则以编码方式为REDIS_ENCODING_HT的对象(哈希表)来存储该值。
+intset 存储结构的编码方式：REDIS_ENCODING_INTSET
 
 
 ### intset存储结构
@@ -15,7 +19,7 @@ inset的实现在intset.c文件中。h
 typedef struct intset {
     uint32_t encoding; //当前用于编码的每个整型使用的字节数
     uint32_t length; // 集合内元素个数，而不是contents的长度
-    int8_t contents[];
+    int8_t contents[]; //存放元素
 } intset;
 
 #define INTSET_ENC_INT16 (sizeof(int16_t))
@@ -26,6 +30,7 @@ typedef struct intset {
 
 内存结构:
 元素按升序存放
+
 ```
 ---------------------------------------------------------------
 encoding | length | 元素1 | 元素2 | ...| 元素n
@@ -55,9 +60,9 @@ encoding | length | 元素1 | 元素2 | ...| 元素n
 
 
 
-## 命令
+## 问题
 
-
+1 使用intset并不能保证操作复杂度为O(1), 添加一个不存在的元素、删除元素都会重新分配内存，并移动数据
 
 ## 命令实现
 

@@ -210,6 +210,46 @@ int kprobe_tcp_connect(struct pt_regs *ctx){
 
 
 
+## 坑
+
+在5.4内核版本
+
+~~~c
+SEC("kprobe/do_sys_open")
+int kprobe___do_sys_open(struct pt_regs *regs){
+    char comm[TASK_COMM_LEN];
+    bpf_get_current_comm(comm, sizeof(comm));
+    char filename[32];
+    int ret = bpf_probe_read_kernel_str(filename, sizeof(filename), (void*)PT_REGS_PARM2(regs));
+    if(ret < 0){
+        bpf_printk(" open ret:%d\n",    ret);
+        return 0;
+    }
+    bpf_printk("  open %s\n",  filename);
+    return 0;
+}
+~~~
+
+上面版本可以正常输出打开的文件，下面版本则只会输出" open ret: -14"。bug在哪里
+
+~~~c
+SEC("kprobe/do_sys_open")
+int kprobe___do_sys_open(struct pt_regs *regs){
+    char comm[TASK_COMM_LEN];
+    bpf_get_current_comm(comm, sizeof(comm));
+    char filename[32];
+    int ret = bpf_probe_read_kernel_str(filename, sizeof(filename), (void*)PT_REGS_PARM2(regs));
+    if(ret < 0){
+        bpf_printk(" open ret:%d\n",    ret);
+        return 0;
+    }
+    bpf_printk(" %s open %s\n", comm, filename);
+    return 0;
+}
+~~~
+
+
+
 ## 如何确定socket fd关联的五元组
 
 ~~~

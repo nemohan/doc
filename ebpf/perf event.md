@@ -59,8 +59,14 @@ unix.PerfEventAttr和 perf_event_attr结构的对应关系:
 ### 问题
 
 * 使用perf 获取调用栈信息和使用ebpf获取调用栈信息有什么区别
-
 * 挂载到"perf event"的epbf程序是何时触发执行的
+* libbpf 中 函数`bpf_program__attach_tracepoint`、`bpf_program__attach_kprobe`  使用perf_event_open时， 参数pid是-1、cpu为0，对应的ebpf程序却能在所有的cpu上执行某个内核函数时被执行，而不是只在cpu-0上触发执行
+
+
+
+libbpf中调用perf_event_open使用的参数如下图所示:
+
+![image-20240103094944865](D:\个人笔记\doc\ebpf\perf event.assets\image-20240103094944865.png)
 
 ### 获取调用栈的代码示例
 

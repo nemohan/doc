@@ -1,8 +1,8 @@
 # 字典
 [TOC]
 
+版本: 7.0.5
 
-6.0.16
 redis中字典由哈希表实现
 
 dict 可以说是redis的核心
@@ -17,29 +17,43 @@ dict 可以说是redis的核心
 
 typedef struct dictType {
     uint64_t (*hashFunction)(const void *key);
-    void *(*keyDup)(void *privdata, const void *key);
-    void *(*valDup)(void *privdata, const void *obj);
-    int (*keyCompare)(void *privdata, const void *key1, const void *key2);
-    void (*keyDestructor)(void *privdata, void *key);
-    void (*valDestructor)(void *privdata, void *obj);
+    void *(*keyDup)(dict *d, const void *key);
+    void *(*valDup)(dict *d, const void *obj);
+    int (*keyCompare)(dict *d, const void *key1, const void *key2);
+    void (*keyDestructor)(dict *d, void *key);
+    void (*valDestructor)(dict *d, void *obj);
+    int (*expandAllowed)(size_t moreMem, double usedRatio);
+    /* Allow a dictEntry to carry extra caller-defined metadata.  The
+     * extra memory is initialized to 0 when a dictEntry is allocated. */
+    size_t (*dictEntryMetadataBytes)(dict *d);
 } dictType;
 
-/* This is our hash table structure. Every dictionary has two of this as we
- * implement incremental rehashing, for the old to the new table. */
-typedef struct dictht {
-    dictEntry **table;
-    unsigned long size; //哈希表大小（bucket个数)
-    unsigned long sizemask; //掩码
-    unsigned long used; //哈希表中元素个数
-} dictht;
+typedef struct dictEntry {
+    void *key;
+    union {
+        void *val;
+        uint64_t u64;
+        int64_t s64;
+        double d;
+    } v;
+    struct dictEntry *next;     /* Next entry in the same hash bucket. */
+    void *metadata[];           /* An arbitrary number of bytes (starting at a
+                                 * pointer-aligned address) of size as returned
+                                 * by dictType's dictEntryMetadataBytes(). */
+} dictEntry;
 
-typedef struct dict {
+struct dict {
     dictType *type;
-    void *privdata;
-    dictht ht[2]; //ht[0]未进行rehash时使用的表。
-    long rehashidx; /* rehashing not in progress if rehashidx == -1 */ //是否正在进行rehash。 不为-1时，表示当前需要迁移的哈希桶的索引,从0开始递增
-    unsigned long iterators; /* number of iterators currently running */
-} dict;
+
+    dictEntry **ht_table[2];
+    unsigned long ht_used[2];
+
+    long rehashidx; /* rehashing not in progress if rehashidx == -1 */
+
+    /* Keep small vars at end for optimal (minimal) struct padding */
+    int16_t pauserehash; /* If >0 rehashing is paused (<0 indicates coding error) */
+    signed char ht_size_exp[2]; /* exponent of size. (size = 1<<exp) */
+};
 
 ~~~
 
@@ -50,26 +64,37 @@ typedef struct dict {
 
 ### 增大哈希表的条件
 若哈希表的初始大小为0，则将哈希表增加到由宏DICT_HT_INITIAL_SIZE定义的默认大小4。
-否则根据哈希表中元素个数和哈希表的大小的比例确定是否拓展哈希表. 若满足拓展条件，将哈希表的大小拓展为哈希表当前元素个数的2倍
-满足以下两个条件之一，则进行rehash:
+否则根据哈希表中元素个数和哈希表的大小的比例确定是否拓展哈希表. 若满足拓展条件，将哈希表的大小拓展为哈希表当前元素个数的2倍。
+若同时满足以下条件，则进行rehash:
 
-* dictht.used >= dictht.size 并且 dict_can_resize 设置为1
-* dictht.used >= dictht.size 并且dictht.used / dictht.size > dict_force_resize_ratio(当前版本是5)。
- 
-
+* 当前哈希表的元素个数大于等于哈希表大小
+* dict_can_resize 为1 或者元素个数/哈希表大小 超过dict_force_resize_ratio
+* 对应的哈希类型允许拓展哈希表
 
 
 ~~~c
-  /* If we reached the 1:1 ratio, and we are allowed to resize the hash
+/* Expand the hash table if needed */
+static int _dictExpandIfNeeded(dict *d)
+{
+    /* Incremental rehashing already in progress. Return. */
+    if (dictIsRehashing(d)) return DICT_OK;
+
+    /* If the hash table is empty expand it to the initial size. */
+    if (DICTHT_SIZE(d->ht_size_exp[0]) == 0) return dictExpand(d, DICT_HT_INITIAL_SIZE);
+
+    /* If we reached the 1:1 ratio, and we are allowed to resize the hash
      * table (global setting) or we should avoid it but the ratio between
      * elements/buckets is over the "safe" threshold, we resize doubling
      * the number of buckets. */
-    if (d->ht[0].used >= d->ht[0].size &&
+    if (d->ht_used[0] >= DICTHT_SIZE(d->ht_size_exp[0]) &&
         (dict_can_resize ||
-         d->ht[0].used/d->ht[0].size > dict_force_resize_ratio))
+         d->ht_used[0]/ DICTHT_SIZE(d->ht_size_exp[0]) > dict_force_resize_ratio) &&
+        dictTypeExpandAllowed(d))
     {
-        return dictExpand(d, d->ht[0].used * 2);
+        return dictExpand(d, d->ht_used[0] + 1);
     }
+    return DICT_OK;
+}
 ~~~
 
 拓展哈希表。首先创建指定大小的哈希表，若第一个哈希表dict.ht[0]为空，表明是初次设置哈希表，将dict.ht[0]指向新创建的哈希表；否则 dict.ht[1]指向新创建的哈希表， 并将dict.rehashidx置为0
@@ -85,26 +110,28 @@ typedef struct dict {
 当前bucket迁移完成后，rehashidx自增指向下一个bucket
 4) 若旧的哈希表的元素个数为0，表明所有元素已经迁移到新的哈希表。则迁移过程结束, 释放旧的哈希表并将dict.ht[0]指向新的哈希表，dict.rehashidx置为-1
 
+### rehash 进行中时的增删改查
 
+#### 添加元素
 
-## 添加元素
 若正在进行rehash, 则首先将dict.ht[0]的一个哈希桶的所有元素迁移到dict.ht[1]中。
-若元素已经存在则放弃添加（查找时会先在旧的哈希表中查找,若正在进行rehash还会在新的哈希表(dict.ht[1])中查找)。
+查找时会先在旧的哈希表中查找,若正在进行rehash还会在新的哈希表(dict.ht_table[1])中查找。若元素已经存在则放弃添加。
 若不存在，则根据是否进行rehash确定添加到新的哈希表中还是旧的哈希表中
-在添加时，根据是否正在进行rehash确定是只在dict.ht[0]中查找，还是两个哈希表中都查找
 
+#### 替换元素
 
-## 替换元素
 若正在进行rehash, 则首先将dict.ht[0]的一个哈希桶的所有元素迁移到dict.ht[1]中。
-若元素已经存在则放弃添加（查找时会先在旧的哈希表中查找,若正在进行rehash还会在新的哈希表(dict.ht[1])中查找)。返回现有元素
-替换元素
+查找时会先在旧的哈希表中查找,若正在进行rehash还会在新的哈希表(dict.ht_table[1])中查找)
 
+找到则替换，未找到则添加
 
-## 查找元素
+#### 查找元素
+
 若正在进行rehash, 则首先将dict.ht[0]由rehashidx指向的哈希桶的所有元素迁移到dict.ht[1]中
 首先在dict.ht[0]指向的哈希表中查找。若未找到，则根据是否在进行rehash,确定是否在dict.ht[1]中查找
 
-## 删除元素
+#### 删除元素
+
 若正在进行rehash, 则首先将dict.ht[0]的一个哈希桶的所有元素迁移到dict.ht[1]中
 首先在dict.ht[0]指向的哈希表查找。若未找到，则根据是否在进行rehash,确定是否在dict.ht[1]中查找
 若找到则删除并将元素个数减1
