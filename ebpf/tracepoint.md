@@ -131,6 +131,112 @@ SYSCALL_TRACE_EXIT_EVENT
 
 
 
+### syscall类型的ebpf程序的参数类型来源
+
+5.15.47/kernel/trace/trace_syscalls.c
+
+~~~c
+static int perf_call_bpf_enter(struct trace_event_call *call, struct pt_regs *regs,
+			       struct syscall_metadata *sys_data,
+			       struct syscall_trace_enter *rec)
+{
+	struct syscall_tp_t {
+		unsigned long long regs;
+		unsigned long syscall_nr;
+		unsigned long args[SYSCALL_DEFINE_MAXARGS];
+	} param;
+	int i;
+
+	*(struct pt_regs **)&param = regs;
+	param.syscall_nr = rec->nr;
+	for (i = 0; i < sys_data->nb_args; i++)
+		param.args[i] = rec->args[i];
+	return trace_call_bpf(call, &param);
+}
+~~~
+
+
+
+## 示例代码
+
+~~~c
+struct enter_accept_args{
+    unsigned long long unused;
+	long syscall_nr;
+    int sockfd;
+    struct sockaddr *addr;
+    u32 *addrlen;
+};
+
+SEC("tracepoint/syscalls/sys_enter_accept")
+//int BPF_PROG(sys__enter_accept,  int sockfd, struct sockaddr *addr, u32 *addrlen){
+int sys__enter_accept(struct enter_accept_args *ctx){
+    char comm[TASK_COMM_LEN];
+    bpf_get_current_comm(comm, sizeof(comm));
+
+    struct socket *sock = fd_to_sock(ctx->sockfd);
+    if(!sock){
+        bpf_printk("fd %d no sock++++++++++\n", ctx->sockfd);
+        return 0;
+    }
+
+    //struct inet_sock *psock = (struct inet_sock*)(sock->sk);
+    struct inet_sock *psock = (struct inet_sock*)BPF_CORE_READ(sock,sk);
+    u32 src_ip = BPF_CORE_READ(psock,inet_saddr);
+    u32 src_port = BPF_CORE_READ(psock,inet_sport); 
+    bpf_printk("sys_enter_accept %s src_ip:%u src_port:%d\n", comm, bpf_ntohl(src_ip), bpf_ntohs(src_port));
+   //bpf_printk("sys_enter_accept %s\n", comm);
+    return 0;
+}
+~~~
+
+## 问题记录
+
+~~~c
+SEC("tracepoint/syscalls/sys_enter_write")
+int static inline sys_enter_write(struct enter_write_args *ctx){
+    char comm[TASK_COMM_LEN];
+    bpf_get_current_comm(comm, sizeof(comm));
+    bpf_printk("sys_enter_write comm:%s fd:%d len:%lld\n", comm, ctx->fd, ctx->count);
+
+    struct write_arg_key key = {
+        .tgid_pid = bpf_get_current_pid_tgid(),
+    };
+    
+    void *buf = ctx->buf; 
+  	int ret = bpf_map_update_elem(&write_args_map, &key, &buf, BPF_ANY);
+    
+    //这样写会导致加载失败
+    //int ret = bpf_map_update_elem(&write_args_map, &key, &(ctx->buf), BPF_ANY);
+    if(ret < 0){
+        bpf_printk("map_update_elem failed. %s ret:%d\n", comm, ret);
+    }
+    return 0;
+}
+
+struct enter_write_args{
+    unsigned long long unused;
+	long syscall_nr;
+    unsigned int fd;
+    const char* buf;
+    size_t count;
+};
+~~~
+
+
+
+尝试挂载上述程序会导致如下错误:
+
+~~~
+panic: program sys_enter_write: load program: permission denied: 38: (85) call bpf_map_update_elem#2: R3 type=ctx expected=fp (49 line(s) omitted)
+~~~
+
+
+
+### invalid indirect read from stack
+
+这种类型的错误是怎么触发的，怎么解决
+
 ## 参考
 
 * 内核5.4 include/linux/syscalls.h

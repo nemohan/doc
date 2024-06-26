@@ -71,7 +71,7 @@ int hook(pt_regs *ctx)
 * PT_REGS_PARM3获取第三个参数
 * PT_REGS_PARM4获取第四个参数
 * PT_REGS_PARM5获取第5个参数
-* PT_REGS_RC，用于kretprobe或uretprobe类型ebpf程序
+* PT_REGS_RC获取返回值，用于kretprobe或uretprobe类型ebpf程序
 
 ### 函数
 

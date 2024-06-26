@@ -43,6 +43,70 @@ int hook(pt_regs *ctx)
 
 
 
+~~~c
+static void __uprobe_perf_func(struct trace_uprobe *tu,
+			       unsigned long func, struct pt_regs *regs,
+			       struct uprobe_cpu_buffer *ucb, int dsize)
+{
+	struct trace_event_call *call = trace_probe_event_call(&tu->tp);
+	struct uprobe_trace_entry_head *entry;
+	struct hlist_head *head;
+	void *data;
+	int size, esize;
+	int rctx;
+
+	if (bpf_prog_array_valid(call)) {
+		u32 ret;
+
+		preempt_disable();
+		ret = trace_call_bpf(call, regs);
+		preempt_enable();
+		if (!ret)
+			return;
+	}
+
+	esize = SIZEOF_TRACE_ENTRY(is_ret_probe(tu));
+
+	size = esize + tu->tp.size + dsize;
+	size = ALIGN(size + sizeof(u32), sizeof(u64)) - sizeof(u32);
+	if (WARN_ONCE(size > PERF_MAX_TRACE_SIZE, "profile buffer not large enough"))
+		return;
+
+	preempt_disable();
+	head = this_cpu_ptr(call->perf_events);
+	if (hlist_empty(head))
+		goto out;
+
+	entry = perf_trace_buf_alloc(size, NULL, &rctx);
+	if (!entry)
+		goto out;
+
+	if (is_ret_probe(tu)) {
+		entry->vaddr[0] = func;
+		entry->vaddr[1] = instruction_pointer(regs);
+		data = DATAOF_TRACE_ENTRY(entry, true);
+	} else {
+		entry->vaddr[0] = instruction_pointer(regs);
+		data = DATAOF_TRACE_ENTRY(entry, false);
+	}
+
+	memcpy(data, ucb->buf, tu->tp.size + dsize);
+
+	if (size - esize > tu->tp.size + dsize) {
+		int len = tu->tp.size + dsize;
+
+		memset(data + len, 0, size - esize - len);
+	}
+
+	perf_trace_buf_submit(entry, size, rctx, call->event.type, 1, regs,
+			      head, NULL);
+ out:
+	preempt_enable();
+}
+~~~
+
+
+
 ## 代码示例
 
 被探查程序
