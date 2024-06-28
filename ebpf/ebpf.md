@@ -117,7 +117,7 @@ int kprobe__nf_conntrack_hash_insert(struct pt_regs *ctx){
 ### ebpf代码如何分布到不同的文件
 
 * 使用一个.c源文件，然后include 其他源文件
-* 使用bpftool gen object 将多个.o文件合并成一个
+* 使用bpftool gen object 将多个.o文件合并成一个。对bpftool版本有要求
 
 ## 常见错误
 

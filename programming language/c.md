@@ -63,3 +63,33 @@ crun_command_create (struct crun_global_arguments *global_args, int argc, char *
 
 ![image-20240510162419712](D:\个人笔记\doc\programming language\c.assets\image-20240510162419712.png)
 
+
+
+## 遇到过的问题
+
+### memset 设置的长度超过缓冲区大小导致" buffer overflow detected"
+
+### memcpy拷贝的长度超过缓冲区大小导致SIGSEGV
+
+### 未检查snprintf的返回值
+
+~~~c
+int update_agent_status(cJSON* stat)
+{
+	int len;
+	int ret;
+	char buffer[512];
+	len = make_agent_status_json(buffer, sizeof(buffer), 0);
+    //len超过buffer大小，导致zookeeper存储的内容包含乱码
+	ret = zk_write_file(g_agent_status.agent_stat_file,buffer,len);
+	if(ret != 0)
+	{
+		log(LOG_ERR,"zk_write_file %s faild!\n",g_agent_status.agent_stat_file);
+		return -1;
+	}
+	return 0;
+}
+~~~
+
+
+

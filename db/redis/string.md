@@ -27,7 +27,7 @@
 1) 检查键值对是否过期，过期则删除
 
 查找键的函数如下，个人认为有些不合理
-```
+```c
 robj *lookupKeyRead(redisDb *db, robj *key) {
     robj *val;
 
