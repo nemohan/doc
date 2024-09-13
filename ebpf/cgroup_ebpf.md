@@ -156,6 +156,72 @@ static int bind_hook(struct bpf_sock_addr *sk) {
 
 
 
+### BPF_PROG_TYPE_CGROUP_SKB
+
+~~~c
+
+#define PACKET_PASS 1
+#define PACKET_DROP 0
+SEC("cgroup_skb/egress")
+int skb_egress(struct __sk_buff *skb){
+    if(skb->local_port != 8000 && bpf_ntohl(skb->remote_port) != 8000){
+        //return PACKET_PASS;
+    }
+    bpf_printk("egress cookie:%lu\n", bpf_get_socket_cookie(skb));
+    bpf_printk("egress. src:%x:%d\n", bpf_ntohl(skb->local_ip4), skb->local_port);
+    bpf_printk("egress. dest:%x:%d\n", bpf_ntohl(skb->remote_ip4), bpf_ntohl(skb->remote_port));
+    u16 sport = bpf_ntohl(skb->local_port) >> 16; 
+    u16 dport = (skb->remote_port) >> 16;
+    struct bpf_sock_tuple  tuple = {
+        .ipv4.saddr = skb->local_ip4,
+        .ipv4.daddr = skb->remote_ip4,
+        .ipv4.sport = sport,
+        .ipv4.dport = dport,
+        
+    };
+    return PACKET_PASS;
+}
+
+~~~
+
+
+
+## 触发执行的条件
+
+### BPF_PROG_TYPE_CGROUP_SKB
+
+~~~c
+static int ip_finish_output(struct net *net, struct sock *sk, struct sk_buff *skb)
+{
+	int ret;
+
+	ret = BPF_CGROUP_RUN_PROG_INET_EGRESS(sk, skb);
+	switch (ret) {
+	case NET_XMIT_SUCCESS:
+		return __ip_finish_output(net, sk, skb);
+	case NET_XMIT_CN:
+		return __ip_finish_output(net, sk, skb) ? : ret;
+	default:
+		kfree_skb(skb);
+		return ret;
+	}
+}
+
+#define BPF_CGROUP_RUN_PROG_INET_EGRESS(sk, skb)			       \
+({									       \
+	int __ret = 0;							       \
+	if (cgroup_bpf_enabled && sk && sk == skb->sk) {		       \
+		typeof(sk) __sk = sk_to_full_sk(sk);			       \
+		if (sk_fullsock(__sk))					       \
+			__ret = __cgroup_bpf_run_filter_skb(__sk, skb,	       \
+						      BPF_CGROUP_INET_EGRESS); \
+	}								       
+	__ret;								       \
+})
+~~~
+
+
+
 ## 遇到的问题
 
 ### 问题1：

@@ -32,7 +32,11 @@ enum bpf_func_id {
 };
 ~~~
 
+### 其他函数
 
+* 拷贝__builtin_memcpy
+* 初始化__builtin_memset
+* 原子操作 __sync_fetch_and_add
 
 ## bpf 内核相关
 
@@ -189,6 +193,7 @@ load program: invalid argument: unknown func bpf_sys_bpf#166
 * https://qmonnet.github.io/whirl-offload/2016/09/01/dive-into-bpf/
 * 内核版本对ebpf的支持  https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md
 * BPF CO-RE BPF 可移植性 https://nakryiko.com/posts/bpf-portability-and-co-re/
+* <font color='red'>各种类型的ebpf的详细介绍 https://ebpf-docs.dylanreimerink.nl/linux/program-type/BPF_PROG_TYPE_RAW_TRACEPOINT/</font>
 
 ### 内核相关参考文档
 

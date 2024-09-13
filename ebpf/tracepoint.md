@@ -30,7 +30,7 @@ bpftrace -l 列出当前内核支持的所有tracepoint和kprobe函数
 
 SYSCALL_TRACE_ENTER_EVENT
 
-~~~C
+~~~c
 #define SYSCALL_TRACE_ENTER_EVENT(sname)				\
 	static struct syscall_metadata __syscall_meta_##sname;		\
 	static struct trace_event_call __used				\
@@ -155,9 +155,46 @@ static int perf_call_bpf_enter(struct trace_event_call *call, struct pt_regs *re
 }
 ~~~
 
+### Tracepoint在内核中的定义
+
+~~~c
+TRACE_EVENT(net_dev_xmit,
+
+	TP_PROTO(struct sk_buff *skb,
+		 int rc,
+		 struct net_device *dev,
+		 unsigned int skb_len),
+
+	TP_ARGS(skb, rc, dev, skb_len),
+
+	TP_STRUCT__entry(
+		__field(	void *,		skbaddr		)
+		__field(	unsigned int,	len		)
+		__field(	int,		rc		)
+		__string(	name,		dev->name	)
+	),
+
+	TP_fast_assign(
+		__entry->skbaddr = skb;
+		__entry->len = skb_len;
+		__entry->rc = rc;
+		__assign_str(name, dev->name);
+	),
+
+	TP_printk("dev=%s skbaddr=%p len=%u rc=%d",
+		__get_str(name), __entry->skbaddr, __entry->len, __entry->rc)
+);
+~~~
+
+Tracepoint函数名: TRACE_EVENT的第一个参数即函数名，实际调用该tracepoint时，会在函数名加上"trace_"前缀，即trace_net_dev_xmit
+
+函数原型: TP_PROTO(struct sk_buff *skb, int rc, struct net_device *dev, unsigned int skb_len)声明函数的原型
+
 
 
 ## 示例代码
+
+### syscalls:sys_enter_accept
 
 ~~~c
 struct enter_accept_args{
@@ -189,6 +226,20 @@ int sys__enter_accept(struct enter_accept_args *ctx){
     return 0;
 }
 ~~~
+
+### net:net_dev_xmit
+
+~~~c
+SEC("tracepoint/net/net_dev_xmit")
+int static __always_inline net_dev_xmit(struct net_dev_xmit_args *ctx){
+    char comm[TASK_COMM_LEN];
+    bpf_get_current_comm(comm, sizeof(comm));
+    bpf_printk("comm:%s dev:%s\n", comm, ctx->dev->name);
+    return 0;
+}
+~~~
+
+
 
 ## 问题记录
 
@@ -237,8 +288,71 @@ panic: program sys_enter_write: load program: permission denied: 38: (85) call b
 
 这种类型的错误是怎么触发的，怎么解决
 
+
+
+### tracepoint 未生效
+
+~~~
+echo 1 > /sys/kernel/tracing/events/net/net_dev_xmit/enable
+~~~
+
+关闭tracepoint:
+
+~~~
+echo 0 > /sys/kernel/tracing/events/net/net_dev_xmit/enable
+~~~
+
+### BPF_PROG_TYPE_TRACEPOINT 类型bpf函数的原型
+
+内核版本5.4.0-190-generic
+
+开始以为net:netif_rx 是内核源码中的宏TP_PROTO也能确定bpf函数原型，所以bpf函数按如下的方式写的，结果发现skb地址跟内核中的trace_netif_rx输出的skb地址不一致。
+
+~~~c
+
+SEC("tracepoint/net/netif_rx")
+static __always_inline int netif_rx(struct sk_buff *skb){
+    bpf_printk("skb: %p \n" , skb);
+    return 0;
+}
+
+~~~
+
+通过使用下面的bpftrace命令:
+
+~~~c
+bpftrace -dd -e 'tracepoint:net:netif_rx {printf("%d\n", args->name)}'
+
+~~~
+
+才确定其使用的参数应该如下：
+
+~~~c
+struct netif_rx_args{
+  unsigned short common_type;
+  unsigned char common_flags;
+  unsigned char common_preempt_count;
+  int common_pid;
+  void * skbaddr;
+  unsigned int len;
+  int data_loc_name;
+};
+
+SEC("tracepoint/net/netif_rx")
+static __always_inline int netif_rx(struct netif_rx_args *ctx){
+    bpf_printk("skb: %p \n" , ctx->skbaddr);
+    return 0;
+}
+
+~~~
+
+即  common_type、common_flags、common_preempt_count、common_pid 四个字段加上TP_STRUCT__entry宏定义的结构体中的字段
+
+syscalls:*类型的bpf函数参数也是
+
 ## 参考
 
 * 内核5.4 include/linux/syscalls.h
 * https://www.kernel.org/doc/html/latest/bpf/libbpf/program_types.html#rawtp
+* Tracepoint 详细介绍 https://lwn.net/Articles/379903/
 
