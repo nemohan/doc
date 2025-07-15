@@ -4,6 +4,8 @@
 
 
 
+版本1.8.3
+
 代码中的注解：
 
 ~~~go
@@ -281,7 +283,7 @@ mapassign 会返回待插入value的内存位置
 bucket 的结构： hash(key)| hash(key2) | key| key2 | value| value2
 
 1. 检查hmap是否为nil,若为nil，则panic
-2. **检测hashWriting标志位是否被设置，若设置则panic(并发写)。否则设置hashWriting标志位**
+2. **检测hashWriting标志位是否被设置，若已被设置则panic(并发写)。否则设置hashWriting标志位**
 3. 计算key的哈希值，使用的哈希函数依赖于key的类型，并确定其将要存储的bucket
 4. **检查是否正在重新哈希,若正在rehash。则将当前key所在的bucket从旧的哈希表迁移到新哈希表。然后再多迁移一个bucket,由hmap.nevacuate确定**
 5. 根据哈希值的最高8位，确定在bmap中的位置。查找空闲槽位。找到后仍然需要遍历所有的bmap，以确当是否有重复的key
@@ -349,10 +351,9 @@ again:
                 //找到空闲位置, 若找到了为啥还continue？因为key冲突的存在，所以还需要检查其他槽位
 				if b.tophash[i] == empty && inserti == nil {
 					inserti = &b.tophash[i]
-					insertk = add(unsafe.Pointer(b),
-                                  dataOffset+i*uintptr(t.keysize))
+					insertk = add(unsafe.Pointer(b),dataOffset+i*uintptr(t.keysize))
                     //待插入value的内存位置
-					val = add(unsafe.Pointer(b), 		  dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
+					val = add(unsafe.Pointer(b),dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.valuesize))
 				}
 				continue
 			}//end if b.tophash[i] != top

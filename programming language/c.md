@@ -93,3 +93,5 @@ int update_agent_status(cJSON* stat)
 
 
 
+### 使用的静态库版本错误导致功能不符合预期
+
