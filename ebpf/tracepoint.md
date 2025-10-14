@@ -323,9 +323,10 @@ static __always_inline int netif_rx(struct sk_buff *skb){
 ~~~c
 bpftrace -dd -e 'tracepoint:net:netif_rx {printf("%d\n", args->name)}'
 
+cat /sys/kernel/debug/tracing/events/net/netif_rx/format
 ~~~
 
-才确定其使用的参数应该如下：
+确定其使用的参数应该如下：
 
 ~~~c
 struct netif_rx_args{

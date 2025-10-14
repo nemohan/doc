@@ -158,6 +158,8 @@ static int bind_hook(struct bpf_sock_addr *sk) {
 
 ### BPF_PROG_TYPE_CGROUP_SKB
 
+skb->data指向ip头
+
 ~~~c
 
 #define PACKET_PASS 1
