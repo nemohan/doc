@@ -19,3 +19,7 @@ stat -fc %T /sys/fs/cgroup/
 对于 cgroup v2，输出为 `cgroup2fs`。
 
 对于 cgroup v1，输出为 `tmpfs`
+
+## 使用cgroup限制资源使用
+
+使用cgroup v1版本限制cpu资源使用时，若线程先于启用cgroup，则开启cgroup 后，不能限制该线程的资源使用，必须手动将线程加入cgroup。cgroup生效后，创建的线程也最好手动加入cgroup。
