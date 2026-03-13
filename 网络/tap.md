@@ -204,7 +204,21 @@ func decodeARP(data []byte) (*layers.ARP, error) {
 
 尝试使用tap0的mac地址作为二层源地址、物理网卡ens33的mac地址作为二层目的地址时，发现发出的数据包无法到达网卡ens33。排查发现是操作系统会用函数eht_type_trans根据数据包的二层目的地址和收到该数据包的网卡skb->dev的mac地址设置数据包的skb->pkt_type方向：若数据包二层目的地址匹配网卡mac地址，skb->pkt_type设置为PACKET_HOST，即该数据包是送往本机的。若数据包的二层目的地址为网卡的广播地址，则skb->pkt_type设置为PACKET_BROADCAST；若数据包的二层目的地址为多播地址，设置为PACKET_MULTICAST；否则是skb->pkt_type设置为PACKET_OTHERHOST。skb->pkt_type类型为PACKET_OTHERHOST的数据包到达ip层时(函数ip_rcv)，会直接被丢弃
 
+向tap虚拟网卡写入数据包，类似物理网卡收到了数据包，会先走一个正常的接收流程。此外，使用打开tap设备实际打开的是/dev/net/tun文件，然后调用ioctl设置了IFF_TAP标志。因此向tap设备写入数据包时，内核代码调用的是tun_get_user(tun_chr_write_iter -->tun_get_user)
+
 以下代码来源于内核5.15.47
+
+tun_get_user代码片段：
+
+其中eth_type_trans(skb, tun->dev)判定skb的目的mac地址和tun->dev的mac地址不匹配，将skb->pkt_type设置为PACKET_OTHERHOST
+
+![image-20251119163507818](D:\个人笔记\doc\网络\tap.assets\image-20251119163507818.png)
+
+
+
+eth_type_trans实现:
+
+需要注意的是PACKET_HOST的值为0，下面代码中skb->pkt_type默认是PACKET_HOST。
 
 ~~~c
 __be16 eth_type_trans(struct sk_buff *skb, struct net_device *dev)

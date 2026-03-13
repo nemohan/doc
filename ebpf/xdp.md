@@ -553,6 +553,14 @@ UMEM 数组可以在多个进程间共享，如果一个进程想创建一个AF_
 
 内核是如何确定将收到的数据包放到哪个"receive queue"中的呢？有两方面：1）BPF_MAP_TYPE_XSKMAP类型的map，这种类型map是一个数组，每个元素可以包含一个AF_XDP socket。使用UMEM的进程可以通过系统调用bpf() 将socket file descriptor放到map中；2） 需要加载一个xdp类型的bpf程序，负责将包发到map中包含的socket
 
+数据包的发送过程：
+
+应用程序是tx ring的生产者、completion ring的消费者。将数据包放到umem中的块上，然后将这些数据包在umem的块位置通过tx ring 提交到内核，调用sendto通知内核发送。然后消费comletion ring获取已经发送的umem的块的索引
+
+数据包的接收过程:
+
+应用程序是rx ring的消费者、fill ring的生产者
+
 ### libbpf 中AF_XDP相关代码
 
 ~~~c
